@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "io.github.venkateshwaryamkibot.ironlog",
+        "sha256_cert_fingerprints": ["14:B4:D8:EA:5F:2F:07:B1:91:BC:A1:D3:A6:92:95:94:BF:49:87:8D:81:46:27:5E:90:C4:C4:F7:0D:1B:9A:FF"]
+      }
+    }]
