@@ -1,0 +1,21 @@
+{
+  "name": "Ember — Habit Tracker",
+  "short_name": "Ember",
+  "description": "Small habits, kept alive daily. A science-backed habit tracker.",
+  "id": "/ember/",
+  "start_url": "/ember/?source=pwa",
+  "scope": "/ember/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A0B10",
+  "theme_color": "#0A0B10",
+  "categories": ["health", "lifestyle", "productivity"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Today", "url": "/ember/?source=shortcut", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
