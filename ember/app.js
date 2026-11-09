@@ -4,7 +4,7 @@
 /* ================= Constants ================= */
 const STORE = 'ember.v1';
 const NATIVE = window.EmberAndroid || null; // present inside the Android app
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const COLORS = ['#F2685B', '#F28C38', '#E9B23F', '#93C83F', '#34C38F', '#26B5B0', '#3FA2F2', '#6F7CF2', '#A26EF2', '#E8609E'];
 const OLD_COLORS = ['#FF6B6B', '#FF8A3D', '#FFC23D', '#A6E35A', '#3DDC97', '#2CC7C9', '#4DA8FF', '#7C7CFF', '#B26BFF', '#FF6BC1'];
 const HABIT_ICONS = ['droplet', 'flower-2', 'book-open', 'dumbbell', 'footprints', 'bike', 'waves', 'activity',
@@ -13,6 +13,11 @@ const HABIT_ICONS = ['droplet', 'flower-2', 'book-open', 'dumbbell', 'footprints
   'glass-water', 'coffee', 'pill', 'heart', 'hand-heart', 'smile', 'sprout', 'leaf',
   'sparkles', 'piggy-bank', 'guitar', 'music', 'palette', 'camera', 'languages', 'graduation-cap',
   'headphones', 'mountain', 'cigarette-off', 'ban', 'shower-head', 'phone', 'flame', 'star'];
+const EMOJIS = ['💧', '🧘', '📖', '💪', '🏃', '🚶', '✍️', '😴', '📵', '🥗', '🙏', '🧠', '🎯', '🧹', '☀️', '💰',
+  '🎸', '🎨', '💊', '🦷', '🍎', '🚭', '🚴', '🏊', '🤸', '📝', '⏰', '❤️', '🌱', '💻', '🗣️', '🎧',
+  '🛏️', '🚿', '🍵', '🌊', '🔥', '⭐', '🥦', '🧃', '🎹', '📚', '🧗', '🏋️', '🐶', '🌞', '🫶', '🚀'];
+const CHEERS = ['Nice!', 'Boom!', 'Nailed it!', 'Yes!', 'Crushed it!', 'Love it!', 'Another vote cast!', 'Look at you go!', 'Done and dusted!', 'Keep it burning!'];
+const TIME_DEFAULT = { morning: '07:30', afternoon: '13:00', evening: '21:00', anytime: '10:00' };
 const EMOJI_ICON = {
   '💧': 'droplet', '🧘': 'flower-2', '📖': 'book-open', '💪': 'dumbbell', '🏃': 'footprints', '🚶': 'footprints', '✍️': 'pen-line',
   '😴': 'moon', '📵': 'smartphone', '🥗': 'salad', '🙏': 'hand-heart', '🧠': 'brain', '🎯': 'target', '🧹': 'sparkles', '☀️': 'sun',
@@ -90,7 +95,7 @@ const fmtDate = (k, long) => {
 
 /* ================= State ================= */
 function defaultState() {
-  return { v: 1, habits: [], logs: {}, settings: { name: '', theme: 'dark', weekStart: 1, reminder: { on: false, time: '20:00' } }, onboarded: false, dismissed: {} };
+  return { v: 1, habits: [], logs: {}, settings: { name: '', theme: 'dark', weekStart: 1, reminder: { on: false, time: '20:30' }, morning: { on: false, time: '07:30' } }, onboarded: false, dismissed: {} };
 }
 function load() {
   try {
@@ -264,12 +269,15 @@ function check(id, k = UI.date) {
   if (nowDone && k === today()) {
     const st = streak(h);
     if (MILESTONES.includes(st)) {
-      setTimeout(() => { confetti(h.color); toast(`${st}-${isWeekly(h) ? 'week' : 'day'} streak · ${h.name}`); }, 250);
+      setTimeout(() => { confetti(h.color); toast(`🏆 ${st}-${isWeekly(h) ? 'week' : 'day'} streak · ${h.name}!`); }, 250);
       return;
     }
   }
   if (after.due && after.ok === after.due && before.ok < before.due) {
-    setTimeout(() => { confetti(); toast(k === today() ? 'Perfect day — every promise kept' : 'That day is now complete'); buzz([20, 60, 30]); }, 250);
+    setTimeout(() => { confetti(); toast(k === today() ? '🎉 Perfect day — every promise kept!' : 'That day is now complete ✨'); buzz([20, 60, 30]); }, 250);
+  } else if (nowDone && k === today()) {
+    const st = streak(h), cheer = CHEERS[Math.floor(Math.random() * CHEERS.length)];
+    toast(st > 1 ? `${cheer} 🔥 ${st}-${isWeekly(h) ? 'week' : 'day'} streak` : `${cheer} ${h.name} ✓`);
   }
 }
 function setCount(id, n, k = UI.date) {
@@ -303,6 +311,7 @@ function addHabit(t) {
     freq: t.freq.type === 'days' ? { type: 'days', days: [...t.freq.days] }
       : t.freq.type === 'weekly' ? { type: 'weekly', times: t.freq.times || 3 } : { type: 'daily' },
     identity: (t.identity || '').trim(), stack: (t.stack || '').trim(), tiny: (t.tiny || '').trim(),
+    remind: t.remind || '',
     created: t.created || today(), archived: false,
     order: S.habits.length ? Math.max(...S.habits.map(x => x.order)) + 1 : 0,
   };
@@ -391,13 +400,13 @@ function widgetPayload() {
     const weekly = isWeekly(h), done = isDone(h, t);
     return {
       id: h.id, name: h.name, emoji: h.emoji, icon: widgetIcon(h), color: h.color, target: h.target, unit: h.unit, time: h.time,
-      freq: h.freq, created: h.created, stack: h.stack, tiny: h.tiny,
+      freq: h.freq, created: h.created, stack: h.stack, tiny: h.tiny, remind: h.remind || '',
       count: countOf(h, t), skip: isSkip(h, t),
       weekDone: weekly ? weekCount(h, t) - (done ? 1 : 0) : 0,
       streakBase: weekly ? streak(h) : streak(h) - (done && scheduled(h, t) ? 1 : 0),
     };
   });
-  return { date: t, weekStart: S.settings.weekStart, theme: document.documentElement.dataset.theme, habits };
+  return { date: t, weekStart: S.settings.weekStart, theme: document.documentElement.dataset.theme, name: S.settings.name, habits };
 }
 // Widgets can't draw SVG, so each habit icon is rasterised once to a small PNG.
 function widgetIcon(h) {
@@ -446,6 +455,7 @@ function habitCard(h, k) {
   else if (h.target > 1) meta.push(`<span>${c} of ${h.target}${h.unit ? ' ' + esc(h.unit) : ''}</span>`);
   if (!skip && !done && h.stack && !isWeekly(h) && h.target <= 1) meta.push(`<span class="ell">After I ${esc(h.stack)}</span>`);
   else if (!skip && !done && !st && h.tiny && h.target <= 1 && !isWeekly(h)) meta.push(`<span class="ell">Start tiny: ${esc(h.tiny)}</span>`);
+  if (NATIVE && h.remind && !done && !skip) meta.push(`<span class="ell" style="display:inline-flex;align-items:center;gap:3px">${ic('bell', 'xs')}${fmtTime(h.remind)}</span>`);
   if (!meta.length) meta.push(`<span>${done ? 'Completed' : freqText(h)}</span>`);
   const counter = h.target > 1 && !done;
   const btn = counter
@@ -546,6 +556,10 @@ function viewToday() {
       notice = `<div class="notice"><div class="ni">${ic('shield', 'sm')}</div><div class="nb"><b>Never miss twice</b>
         ${miss.slice(0, 3).map(h => esc(h.name)).join(', ')}${miss.length > 3 ? ` and ${miss.length - 3} more` : ''} slipped last time. Today, even the two-minute version counts.</div>
         <button class="x" data-action="dismiss" data-what="nmt" aria-label="Dismiss">${ic('x', 'sm')}</button></div>`;
+    } else if (NATIVE && NATIVE.setReminders && !S.dismissed.remind && !S.settings.reminder.on && !S.settings.morning.on && !list.some(h => h.remind)) {
+      notice = `<div class="notice"><div class="ni">${ic('bell', 'sm')}</div><div class="nb"><b>Let Ember nudge you</b>A morning kickoff, an evening streak saver and per-habit reminders you can tick off right from the notification.
+        <div><button class="btn sm primary" data-action="enable-reminders">Turn on reminders</button></div></div>
+        <button class="x" data-action="dismiss" data-what="remind" aria-label="Dismiss">${ic('x', 'sm')}</button></div>`;
     } else if (UI.installEvt && !S.dismissed.install) {
       notice = `<div class="notice"><div class="ni">${ic('download', 'sm')}</div><div class="nb"><b>Install Ember</b>Full-screen and offline, right from your home screen.
         <div><button class="btn sm primary" data-action="install">Install app</button></div></div>
@@ -725,10 +739,14 @@ function viewSettings() {
     <div class="set-row">${si('palette', '#A26EF2')}<span class="st">Appearance</span>${seg('theme', s.theme, [['system', 'Auto'], ['dark', 'Dark'], ['light', 'Light']])}</div>
     <div class="set-row">${si('calendar', '#34C38F')}<span class="st">Week starts on</span>${seg('weekStart', s.weekStart, [[1, 'Mon'], [0, 'Sun']])}</div>
   </div></div>
-  ${NATIVE ? `<div class="set-group"><h3>Reminder</h3><div class="set-card">
-    <div class="set-row">${si('bell', '#F28C38')}<span class="st">Daily nudge<small>Only when habits are still open.</small></span>${seg('reminder', s.reminder.on ? 'on' : 'off', [['off', 'Off'], ['on', 'On']])}</div>
+  ${NATIVE ? `<div class="set-group"><h3>Reminders</h3><div class="set-card">
+    ${UI.notifOff ? `<button class="set-row" data-action="notif-settings">${si('bell', '#F2685B')}<span class="st" style="color:var(--bad)">Notifications are off<small>Tap to allow them in Android settings.</small></span>${ic('chevron-right', 'sm chev')}</button>` : ''}
+    <div class="set-row">${si('sunrise', '#E9B23F')}<span class="st">Morning kickoff<small>Today’s plan, first thing.</small></span>${seg('morning', s.morning.on ? 'on' : 'off', [['off', 'Off'], ['on', 'On']])}</div>
+    ${s.morning.on ? `<div class="set-row">${si('clock', '#E9B23F')}<span class="st">Time</span><input class="input" type="time" id="set-morning" value="${esc(s.morning.time)}" style="max-width:160px;padding:0 12px"></div>` : ''}
+    <div class="set-row">${si('flame', '#F28C38')}<span class="st">Evening streak saver<small>Only when habits are still open.</small></span>${seg('reminder', s.reminder.on ? 'on' : 'off', [['off', 'Off'], ['on', 'On']])}</div>
     ${s.reminder.on ? `<div class="set-row">${si('clock', '#F28C38')}<span class="st">Time</span><input class="input" type="time" id="set-remind" value="${esc(s.reminder.time)}" style="max-width:160px;padding:0 12px"></div>` : ''}
-  </div><p class="hint" style="margin:8px 4px 0">Evening works best — late enough to know what’s left, early enough to do the tiny version.</p></div>` : ''}
+    <button class="set-row" data-action="test-notif">${si('bell', '#6F7CF2')}<span class="st">Send a test notification<small>See how a habit reminder looks.</small></span>${ic('chevron-right', 'sm chev')}</button>
+  </div><p class="hint" style="margin:8px 4px 0">Set a reminder for each habit in its editor — you can tick it off straight from the notification.</p></div>` : ''}
   ${NATIVE ? `<div class="set-group"><h3>Home screen widgets</h3><div class="set-card">
     <button class="set-row" data-action="pin-widget" data-w="today">${si('list-checks', '#6F7CF2')}<span class="st">Today list<small>Check off habits from your home screen.</small></span><span class="btn sm">Add</span></button>
     <button class="set-row" data-action="pin-widget" data-w="ring">${si('layout-grid', '#6F7CF2')}<span class="st">Progress ring<small>Today’s progress and best streak.</small></span><span class="btn sm">Add</span></button>
@@ -837,6 +855,7 @@ function habitSheet(h) {
   if (h.identity) why.push(`<div class="li">${ic('user-round', 'sm')}<div><small>Identity</small>I am someone who ${esc(h.identity)}.</div></div>`);
   if (h.stack) why.push(`<div class="li">${ic('link', 'sm')}<div><small>Cue</small>After I ${esc(h.stack)}, I will ${esc(h.name.toLowerCase())}.</div></div>`);
   if (h.tiny) why.push(`<div class="li">${ic('feather', 'sm')}<div><small>Two-minute version</small>${esc(h.tiny)}</div></div>`);
+  if (h.remind && NATIVE) why.push(`<div class="li">${ic('bell', 'sm')}<div><small>Reminder</small>Every scheduled day at ${fmtTime(h.remind)}</div></div>`);
   const c = countOf(h, k), skip = isSkip(h, k), done = isDone(h, k);
   const dayLbl = k === t ? 'today' : fmtDate(k);
   const ctl = h.target > 1
@@ -883,7 +902,10 @@ function openHabit(id) { const h = byId(id); if (h) openSheet(habitSheet(h), 'ha
 let D = null; // draft
 function draftFrom(src) {
   return {
-    id: src.id || null, name: src.name || '', icon: src.icon || (EMOJI_ICON[src.emoji] || 'star'), emoji: src.emoji || '⭐', color: src.color || COLORS[1],
+    id: src.id || null, name: src.name || '', icon: src.icon || (EMOJI_ICON[src.emoji] || 'star'),
+    emoji: src.emoji || Object.keys(EMOJI_ICON).find(e => EMOJI_ICON[e] === src.icon) || '⭐',
+    style: src.icon || !src.id ? 'icon' : 'emoji', remind: src.remind || '',
+    color: src.color || COLORS[1],
     target: src.target || 1, unit: src.unit || '', time: src.time || 'anytime',
     freq: { type: src.freq?.type || 'daily', days: src.freq?.days ? [...src.freq.days] : [1, 2, 3, 4, 5], times: src.freq?.times || 3 },
     identity: src.identity || '', stack: src.stack || '', tiny: src.tiny || '',
@@ -905,9 +927,13 @@ function editorHtml() {
   const tpl = D.isNew ? `<div class="field" style="margin-top:0"><label>Start from an idea</label><div class="chips scroll">${TEMPLATES.map((t, i) => `<button class="chip" data-action="e-tpl" data-i="${i}" style="--c:${t.color}"><span style="color:${t.color};display:flex">${ic(t.icon, 'sm')}</span>${esc(t.name)}</button>`).join('')}</div></div>` : '';
   return `<div class="sheet-title"><h2 class="t-title">${D.isNew ? 'New habit' : 'Edit habit'}</h2><button class="icon-btn" data-action="close-sheet" aria-label="Close">${ic('x', 'sm')}</button></div>
     ${tpl}
-    <div class="preview" style="margin-top:${D.isNew ? 20 : 0}px">${tile(D)}<div style="min-width:0"><div class="pv-n" id="pv-n">${esc(D.name) || 'Untitled habit'}</div><div class="pv-s">${freqText(D)} · ${TIMES.find(t => t.id === D.time).label}</div></div></div>
+    <div class="preview" style="margin-top:${D.isNew ? 20 : 0}px">${tile({ ...D, icon: D.style === 'icon' ? D.icon : '' })}<div style="min-width:0"><div class="pv-n" id="pv-n">${esc(D.name) || 'Untitled habit'}</div><div class="pv-s">${freqText(D)} · ${TIMES.find(t => t.id === D.time).label}</div></div></div>
     <div class="field"><label for="e-name">Name</label><input class="input" id="e-name" data-f="name" value="${esc(D.name)}" placeholder="e.g. Read 10 pages" maxlength="40" autocomplete="off"></div>
-    <div class="field"><label>Icon</label><div class="icons-grid" style="--c:${D.color}">${HABIT_ICONS.map(n => `<button class="${n === D.icon ? 'on' : ''}" data-action="e-icon" data-v="${n}" aria-label="${n}">${ic(n)}</button>`).join('')}</div></div>
+    <div class="field"><label>Icon</label>
+      <div class="seg" style="margin-bottom:10px"><button class="${D.style === 'icon' ? 'on' : ''}" data-action="e-style" data-v="icon">Icons</button><button class="${D.style === 'emoji' ? 'on' : ''}" data-action="e-style" data-v="emoji">Emoji</button></div>
+      <div class="icons-grid" style="--c:${D.color}">${D.style === 'icon'
+        ? HABIT_ICONS.map(n => `<button class="${n === D.icon ? 'on' : ''}" data-action="e-icon" data-v="${n}" aria-label="${n}">${ic(n)}</button>`).join('')
+        : EMOJIS.map(e => `<button class="emo ${e === D.emoji ? 'on' : ''}" data-action="e-emoji" data-v="${e}">${e}</button>`).join('')}</div></div>
     <div class="field"><label>Colour</label><div class="colors">${COLORS.map(c => `<button class="${c === D.color ? 'on' : ''}" style="--sw:${c}" data-action="e-color" data-v="${c}" aria-label="Colour ${c}"></button>`).join('')}</div></div>
     <div class="field"><label>Goal</label>
       <div class="seg"><button class="${D.target <= 1 ? 'on' : ''}" data-action="e-goal" data-v="check">Complete once</button><button class="${D.target > 1 ? 'on' : ''}" data-action="e-goal" data-v="count">Reach a number</button></div>
@@ -921,6 +947,10 @@ function editorHtml() {
       ${f.type === 'weekly' ? `<div style="display:flex;gap:12px;margin-top:10px;align-items:center"><div class="stepper"><button data-action="e-times" data-d="-1" aria-label="Decrease">${ic('chevron-left', 'sm')}</button><span class="sv">${f.times}×</span><button data-action="e-times" data-d="1" aria-label="Increase">${ic('plus', 'sm')}</button></div><span class="t-cap">per week, any days</span></div>` : ''}
     </div>
     <div class="field"><label>Time of day</label><div class="chips">${TIMES.map(t => `<button class="chip ${D.time === t.id ? 'on' : ''}" data-action="e-time" data-v="${t.id}">${ic(t.icon)}${t.label}</button>`).join('')}</div></div>
+    ${NATIVE ? `<div class="field"><label>Reminder</label>
+      <div class="seg"><button class="${D.remind ? '' : 'on'}" data-action="e-remind" data-v="off">Off</button><button class="${D.remind ? 'on' : ''}" data-action="e-remind" data-v="on">Remind me</button></div>
+      ${D.remind ? `<div style="display:flex;gap:12px;margin-top:10px;align-items:center"><input class="input" type="time" id="e-remind-time" value="${esc(D.remind)}" style="max-width:160px;padding:0 12px"><span class="t-cap">Tick it off right from the notification</span></div>` : ''}
+    </div>` : ''}
     <div class="stick-card"><div class="sc-head">${ic('wand-sparkles', 'sm')}Make it stick</div>
       <p class="help" style="margin:4px 0 0">Optional, but these three answers are what separate habits that last from ones that fade.</p>
       <div class="field"><label>Identity</label><div class="prefix" style="--pl:160px"><span>I am someone who</span><input class="input" data-f="identity" value="${esc(D.identity)}" placeholder="reads every day" maxlength="60"></div>
@@ -938,10 +968,11 @@ function saveDraft() {
   if (D.freq.type === 'days' && !D.freq.days.length) { toast('Pick at least one day'); return; }
   const freq = D.freq.type === 'days' ? { type: 'days', days: [...D.freq.days].sort() } : D.freq.type === 'weekly' ? { type: 'weekly', times: D.freq.times } : { type: 'daily' };
   let h;
-  if (D.isNew) { h = addHabit({ ...D, freq }); }
+  const icon = D.style === 'icon' ? D.icon : '';
+  if (D.isNew) { h = addHabit({ ...D, icon, freq }); }
   else {
     h = byId(D.id); if (!h) return;
-    Object.assign(h, { name, icon: D.icon, color: D.color, target: Math.max(1, D.target), unit: D.unit.trim(), time: D.time, freq, identity: D.identity.trim(), stack: D.stack.trim(), tiny: D.tiny.trim() });
+    Object.assign(h, { name, icon, emoji: D.emoji, remind: D.remind, color: D.color, target: Math.max(1, D.target), unit: D.unit.trim(), time: D.time, freq, identity: D.identity.trim(), stack: D.stack.trim(), tiny: D.tiny.trim() });
   }
   save();
   const wasNew = D.isNew; D = null;
@@ -1052,10 +1083,26 @@ const actions = {
   setting: el => {
     const k = el.dataset.k; let v = el.dataset.v;
     if (k === 'weekStart') v = +v;
-    if (k === 'reminder') { S.settings.reminder.on = v === 'on'; save(); syncReminder(); render(); return; }
+    if (k === 'reminder' || k === 'morning') {
+      S.settings[k].on = v === 'on'; save(); syncReminder(); render();
+      if (v === 'on') { askNotif(); toast(k === 'morning' ? `☀️ Morning kickoff at ${fmtTime(S.settings.morning.time)}` : `🔥 Streak saver at ${fmtTime(S.settings.reminder.time)}`); }
+      return;
+    }
     S.settings[k] = v; save(); render();
   },
   export: exportData,
+  'enable-reminders': () => {
+    S.settings.morning.on = true; S.settings.reminder.on = true; S.dismissed.remind = true;
+    save(); syncReminder(); askNotif(); render();
+    toast(`🔔 Reminders on — ${fmtTime(S.settings.morning.time)} & ${fmtTime(S.settings.reminder.time)}`);
+  },
+  'test-notif': () => {
+    askNotif();
+    try { NATIVE.testNotification(); } catch (e) { }
+    setTimeout(checkNotif, 400);
+    toast(UI.notifOff ? 'Notifications are off — allow them first' : '🔔 Sent! Check your notification shade');
+  },
+  'notif-settings': () => { try { NATIVE.openNotificationSettings(); } catch (e) { } },
   'pin-widget': el => {
     let ok = false;
     try { ok = NATIVE && NATIVE.pinWidget && NATIVE.pinWidget(el.dataset.w); } catch (e) { }
@@ -1084,6 +1131,9 @@ const actions = {
   // editor
   'e-tpl': el => { const keep = D.isNew; D = draftFrom(TEMPLATES[+el.dataset.i]); D.isNew = keep; rerenderEditor(); },
   'e-icon': el => { D.icon = el.dataset.v; rerenderEditor(); },
+  'e-emoji': el => { D.emoji = el.dataset.v; rerenderEditor(); },
+  'e-style': el => { D.style = el.dataset.v; rerenderEditor(); },
+  'e-remind': el => { D.remind = el.dataset.v === 'on' ? (D.remind || TIME_DEFAULT[D.time] || '09:00') : ''; if (D.remind) askNotif(); rerenderEditor(); },
   'e-color': el => { D.color = el.dataset.v; rerenderEditor(); },
   'e-goal': el => { D.target = el.dataset.v === 'count' ? Math.max(2, D.target > 1 ? D.target : 8) : 1; rerenderEditor(); },
   'e-target': el => { D.target = Math.max(2, Math.min(999, D.target + +el.dataset.d)); rerenderEditor(); },
@@ -1113,7 +1163,9 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   if (e.target.id === 'set-name') { S.settings.name = e.target.value.trim(); save(); }
-  if (e.target.id === 'set-remind' && e.target.value) { S.settings.reminder.time = e.target.value; save(); syncReminder(); toast(`Reminder set for ${e.target.value}`); }
+  if (e.target.id === 'set-remind' && e.target.value) { S.settings.reminder.time = e.target.value; save(); syncReminder(); toast(`🔥 Streak saver at ${fmtTime(e.target.value)}`); }
+  if (e.target.id === 'set-morning' && e.target.value) { S.settings.morning.time = e.target.value; save(); syncReminder(); toast(`☀️ Morning kickoff at ${fmtTime(e.target.value)}`); }
+  if (e.target.id === 'e-remind-time' && D && e.target.value) { D.remind = e.target.value; }
 });
 
 /* ================= Day rollover & PWA ================= */
@@ -1134,8 +1186,24 @@ try { if (navigator.storage && navigator.storage.persist) navigator.storage.pers
 
 function syncReminder() {
   if (!NATIVE) return;
-  const r = S.settings.reminder, [hh, mm] = r.time.split(':').map(Number);
-  try { NATIVE.setReminder(!!r.on, hh, mm); } catch (e) { }
+  const r = S.settings.reminder, m = S.settings.morning;
+  try {
+    if (NATIVE.setReminders) NATIVE.setReminders(JSON.stringify({ evening: { on: !!r.on, time: r.time }, morning: { on: !!m.on, time: m.time } }));
+    else { const [hh, mm] = r.time.split(':').map(Number); NATIVE.setReminder(!!r.on, hh, mm); }
+  } catch (e) { }
+  checkNotif();
+}
+function askNotif() { try { NATIVE && NATIVE.requestNotifications && NATIVE.requestNotifications(); } catch (e) { } }
+function checkNotif() {
+  let off = false;
+  try { off = !!(NATIVE && NATIVE.notificationsEnabled && !NATIVE.notificationsEnabled()); } catch (e) { }
+  if (off !== !!UI.notifOff) { UI.notifOff = off; if (UI.tab === 'settings') render(); }
+}
+window.emberNotifChanged = () => setTimeout(checkNotif, 300);
+function fmtTime(t) {
+  const [h, m] = String(t).split(':').map(Number);
+  const d = new Date(); d.setHours(h, m || 0, 0, 0);
+  return d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 }
 // Android back button: close sheet → go to Today → exit
 window.emberBack = function () {
@@ -1144,7 +1212,7 @@ window.emberBack = function () {
   if (UI.date !== today()) { UI.date = today(); render(); return true; }
   return false;
 };
-window.checkRollover = checkRollover;
+window.checkRollover = () => { checkRollover(); checkNotif(); };
 window.toast = toast;
 
 emberSyncFromNative();

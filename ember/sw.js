@@ -1,5 +1,5 @@
 /* Ember service worker — offline-first app shell */
-const CACHE = 'ember-v3';
+const CACHE = 'ember-v4';
 const SHELL = ['./', 'index.html', 'app.css', 'app.js', 'icons.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png',
   'fonts/jakarta-400.woff2', 'fonts/jakarta-500.woff2', 'fonts/jakarta-600.woff2', 'fonts/jakarta-700.woff2', 'fonts/jakarta-800.woff2'];
 

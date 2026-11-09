@@ -113,6 +113,12 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public void onRequestPermissionsResult(int req, String[] perms, int[] results) {
+        super.onRequestPermissionsResult(req, perms, results);
+        if (req == REQ_NOTIF) js("window.emberNotifChanged && window.emberNotifChanged()");
+    }
+
+    @Override
     protected void onActivityResult(int req, int res, Intent data) {
         super.onActivityResult(req, res, data);
         if (req == REQ_OPEN) {
@@ -187,6 +193,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void setWidgetData(String json) {
             WidgetData.setFromJs(MainActivity.this, json);
+            ReminderReceiver.onSnapshot(MainActivity.this);
             Widgets.updateAll(MainActivity.this);
         }
 
@@ -217,23 +224,82 @@ public class MainActivity extends Activity {
                     .putString("statusDay", day).putInt("left", left).apply();
         }
 
+        /** Legacy single evening reminder (kept for older app versions). */
         @JavascriptInterface
         public void setReminder(final boolean on, int hour, int minute) {
-            SharedPreferences p = getSharedPreferences(ReminderReceiver.PREFS, MODE_PRIVATE);
-            boolean wasOn = p.getBoolean("on", false);
-            p.edit().putBoolean("on", on).putInt("hour", hour).putInt("minute", minute).apply();
-            ReminderReceiver.schedule(MainActivity.this);
-            if (on && !wasOn && Build.VERSION.SDK_INT >= 33) {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        String perm = "android.permission.POST_NOTIFICATIONS";
-                        if (checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
-                            requestPermissions(new String[]{perm}, REQ_NOTIF);
-                        }
+            getSharedPreferences(ReminderReceiver.PREFS, MODE_PRIVATE).edit()
+                    .putBoolean("on", on).putInt("hour", hour).putInt("minute", minute).apply();
+            ReminderReceiver.scheduleAll(MainActivity.this);
+        }
+
+        /** {"evening":{"on":true,"time":"20:30"},"morning":{"on":true,"time":"07:30"}} */
+        @JavascriptInterface
+        public void setReminders(String json) {
+            try {
+                org.json.JSONObject o = new org.json.JSONObject(json);
+                org.json.JSONObject ev = o.optJSONObject("evening"), mo = o.optJSONObject("morning");
+                SharedPreferences.Editor e = getSharedPreferences(ReminderReceiver.PREFS, MODE_PRIVATE).edit();
+                if (ev != null) {
+                    int[] t = ReminderReceiver.parseTime(ev.optString("time"));
+                    e.putBoolean("on", ev.optBoolean("on"));
+                    if (t != null) e.putInt("hour", t[0]).putInt("minute", t[1]);
+                }
+                if (mo != null) {
+                    int[] t = ReminderReceiver.parseTime(mo.optString("time"));
+                    e.putBoolean("mOn", mo.optBoolean("on"));
+                    if (t != null) e.putInt("mHour", t[0]).putInt("mMinute", t[1]);
+                }
+                e.apply();
+            } catch (Exception ignored) { }
+            ReminderReceiver.scheduleAll(MainActivity.this);
+        }
+
+        /** Ask for the notification permission (Android 13+). */
+        @JavascriptInterface
+        public void requestNotifications() {
+            if (Build.VERSION.SDK_INT < 33) return;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    String perm = "android.permission.POST_NOTIFICATIONS";
+                    if (checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(new String[]{perm}, REQ_NOTIF);
                     }
-                });
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public boolean notificationsEnabled() {
+            try {
+                Object nm = getSystemService(NOTIFICATION_SERVICE);
+                return (Boolean) nm.getClass().getMethod("areNotificationsEnabled").invoke(nm);
+            } catch (Exception e) {
+                return true;
             }
+        }
+
+        @JavascriptInterface
+        public void openNotificationSettings() {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    Intent i;
+                    if (Build.VERSION.SDK_INT >= 26) {
+                        i = new Intent("android.settings.APP_NOTIFICATION_SETTINGS")
+                                .putExtra("android.provider.extra.APP_PACKAGE", getPackageName());
+                    } else {
+                        i = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                Uri.parse("package:" + getPackageName()));
+                    }
+                    try { startActivity(i); } catch (Exception ignored) { }
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void testNotification() {
+            ReminderReceiver.test(MainActivity.this);
         }
     }
 }
