@@ -3,6 +3,7 @@
 
 /* ================= Constants ================= */
 const STORE = 'ember.v1';
+const NATIVE = window.EmberAndroid || null; // present inside the Android app
 const VERSION = '1.0.0';
 const COLORS = ['#FF6B6B', '#FF8A3D', '#FFC23D', '#A6E35A', '#3DDC97', '#2CC7C9', '#4DA8FF', '#7C7CFF', '#B26BFF', '#FF6BC1'];
 const EMOJIS = ['💧', '🧘', '📖', '💪', '🏃', '🚶', '✍️', '😴', '📵', '🥗', '🙏', '🧠', '🎯', '🧹', '☀️', '💰',
@@ -87,7 +88,7 @@ const fmtDate = (k, long) => {
 
 /* ================= State ================= */
 function defaultState() {
-  return { v: 1, habits: [], logs: {}, settings: { name: '', theme: 'dark', weekStart: 1 }, onboarded: false, dismissed: {} };
+  return { v: 1, habits: [], logs: {}, settings: { name: '', theme: 'dark', weekStart: 1, reminder: { on: false, time: '20:00' } }, onboarded: false, dismissed: {} };
 }
 function load() {
   try {
@@ -361,6 +362,15 @@ function render() {
         : UI.tab === 'habits' ? viewHabits() : viewSettings();
   animateRings(v);
   UI.justDone = null;
+  nativeSync();
+}
+function nativeSync() {
+  if (!NATIVE) return;
+  try {
+    const p = dayProgress(today());
+    NATIVE.setStatus(today(), p.due - p.ok);
+    NATIVE.setBars(document.documentElement.dataset.theme === 'light');
+  } catch (e) { }
 }
 
 /* ---------- Today ---------- */
@@ -647,10 +657,14 @@ function viewSettings() {
     <div class="set-row"><span class="si">🎨</span><span class="st">Theme</span>${seg('theme', s.theme, [['system', 'Auto'], ['dark', 'Dark'], ['light', 'Light']])}</div>
     <div class="set-row"><span class="si">📅</span><span class="st">Week starts</span>${seg('weekStart', s.weekStart, [[1, 'Mon'], [0, 'Sun']])}</div>
   </div></div>
-  <div class="set-group"><h3>App</h3><div class="set-card">
+  ${NATIVE ? `<div class="set-group"><h3>Reminder</h3><div class="set-card">
+    <div class="set-row"><span class="si">🔔</span><span class="st">Daily nudge<small>Only if habits are still open that day.</small></span>${seg('reminder', s.reminder.on ? 'on' : 'off', [['off', 'Off'], ['on', 'On']])}</div>
+    ${s.reminder.on ? `<div class="set-row"><span class="si">⏰</span><span class="st">Time</span><input class="input" type="time" id="set-remind" value="${esc(s.reminder.time)}" style="max-width:160px;padding:0 12px"></div>` : ''}
+  </div><p class="hint" style="margin:8px 4px 0">Tip: set it for the evening — late enough to know what’s left, early enough to do the tiny version.</p></div>` : ''}
+  ${NATIVE ? '' : `<div class="set-group"><h3>App</h3><div class="set-card">
     ${installed ? `<div class="set-row"><span class="si">✅</span><span class="st">Installed<small>Ember is running as an app on this device.</small></span></div>`
       : `<button class="set-row" data-action="install"><span class="si">📲</span><span class="st">Install on home screen<small>${UI.installEvt ? 'Full-screen, offline, like a native app.' : 'In Chrome: ⋮ menu → “Add to Home screen” or “Install app”.'}</small></span></button>`}
-  </div></div>
+  </div></div>`}
   <div class="set-group"><h3>Your data</h3><div class="set-card">
     <button class="set-row" data-action="export"><span class="si">💾</span><span class="st">Export backup<small>Download all habits and history as a file.</small></span></button>
     <button class="set-row" data-action="import"><span class="si">📂</span><span class="st">Import backup<small>Restore from an Ember backup file.</small></span></button>
@@ -696,7 +710,7 @@ function openSheet(html, kind, data) {
     root.innerHTML = `<div class="sheet-wrap"><div class="sheet-bd" data-action="close-sheet"></div><div class="sheet" role="dialog" aria-modal="true"><div class="grab"></div><div class="sheet-body"></div></div></div>`;
     wrap = root.querySelector('.sheet-wrap');
     bindSheetDrag(wrap.querySelector('.sheet'));
-    history.pushState({ sheet: true }, '');
+    if (!NATIVE) { try { history.pushState({ sheet: true }, ''); } catch (e) { } }
     requestAnimationFrame(() => requestAnimationFrame(() => wrap.classList.add('open')));
   } else {
     wrap.querySelector('.sheet').scrollTop = 0;
@@ -713,7 +727,7 @@ function closeSheet(fromPop) {
   wrap.classList.remove('open');
   wrap.querySelector('.sheet').style.transform = '';
   setTimeout(() => { if (wrap.parentNode && !wrap.classList.contains('open')) wrap.remove(); }, 380);
-  if (!fromPop && history.state && history.state.sheet) history.back();
+  if (!NATIVE && !fromPop && history.state && history.state.sheet) history.back();
 }
 window.addEventListener('popstate', () => { if (UI.sheet) closeSheet(true); });
 function refreshSheet() {
@@ -904,6 +918,7 @@ function confetti(color) {
 
 /* ================= Backup ================= */
 function exportData() {
+  if (NATIVE) { NATIVE.saveBackup(JSON.stringify({ app: 'ember', exported: new Date().toISOString(), ...S }, null, 2), `ember-backup-${today()}.json`); return; }
   const blob = new Blob([JSON.stringify({ app: 'ember', exported: new Date().toISOString(), ...S }, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob); a.download = `ember-backup-${today()}.json`;
@@ -965,6 +980,7 @@ const actions = {
   setting: el => {
     const k = el.dataset.k; let v = el.dataset.v;
     if (k === 'weekStart') v = +v;
+    if (k === 'reminder') { S.settings.reminder.on = v === 'on'; save(); syncReminder(); render(); return; }
     S.settings[k] = v; save(); render();
   },
   export: exportData,
@@ -1020,6 +1036,7 @@ document.addEventListener('input', e => {
 });
 document.addEventListener('change', e => {
   if (e.target.id === 'set-name') { S.settings.name = e.target.value.trim(); save(); }
+  if (e.target.id === 'set-remind' && e.target.value) { S.settings.reminder.time = e.target.value; save(); syncReminder(); toast(`Reminder set for ${e.target.value}`); }
 });
 
 /* ================= Day rollover & PWA ================= */
@@ -1038,4 +1055,20 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { }
 
+function syncReminder() {
+  if (!NATIVE) return;
+  const r = S.settings.reminder, [hh, mm] = r.time.split(':').map(Number);
+  try { NATIVE.setReminder(!!r.on, hh, mm); } catch (e) { }
+}
+// Android back button: close sheet → go to Today → exit
+window.emberBack = function () {
+  if (UI.sheet) { closeSheet(true); return true; }
+  if (S.onboarded && UI.tab !== 'today') { UI.tab = 'today'; render(); window.scrollTo(0, 0); return true; }
+  if (UI.date !== today()) { UI.date = today(); render(); return true; }
+  return false;
+};
+window.checkRollover = checkRollover;
+window.toast = toast;
+
 render();
+syncReminder();
