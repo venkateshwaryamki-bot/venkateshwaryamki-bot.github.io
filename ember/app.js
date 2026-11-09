@@ -370,8 +370,40 @@ function nativeSync() {
     const p = dayProgress(today());
     NATIVE.setStatus(today(), p.due - p.ok);
     NATIVE.setBars(document.documentElement.dataset.theme === 'light');
+    if (NATIVE.setWidgetData) NATIVE.setWidgetData(JSON.stringify(widgetPayload()));
   } catch (e) { }
 }
+// Snapshot of today for the home-screen widgets (see WidgetData.java)
+function widgetPayload() {
+  const t = today();
+  const order = TIMES.map(x => x.id);
+  const habits = active().slice().sort((a, b) => order.indexOf(a.time) - order.indexOf(b.time) || a.order - b.order).map(h => {
+    const weekly = isWeekly(h), done = isDone(h, t);
+    return {
+      id: h.id, name: h.name, emoji: h.emoji, color: h.color, target: h.target, unit: h.unit, time: h.time,
+      freq: h.freq, created: h.created, stack: h.stack, tiny: h.tiny,
+      count: countOf(h, t), skip: isSkip(h, t),
+      weekDone: weekly ? weekCount(h, t) - (done ? 1 : 0) : 0,
+      streakBase: weekly ? streak(h) : streak(h) - (done && scheduled(h, t) ? 1 : 0),
+    };
+  });
+  return { date: t, weekStart: S.settings.weekStart, theme: document.documentElement.dataset.theme, habits };
+}
+// Apply habit taps made on the home-screen widget while the app was closed
+function emberSyncFromNative() {
+  if (!NATIVE || !NATIVE.takeActions) return;
+  let acts = [];
+  try { acts = JSON.parse(NATIVE.takeActions() || '[]'); } catch (e) { return; }
+  if (!Array.isArray(acts) || !acts.length) return;
+  for (const a of acts) {
+    const h = byId(a.id); if (!h || !a.date || a.date > today()) continue;
+    const L = logOf(h), v = L[a.date], c = typeof v === 'number' ? v : 0;
+    if (c >= h.target) delete L[a.date]; else L[a.date] = h.target > 1 ? c + 1 : 1;
+  }
+  save();
+  if (document.getElementById('view').childElementCount) render();
+}
+window.emberSyncFromNative = emberSyncFromNative;
 
 /* ---------- Today ---------- */
 function habitCard(h, k) {
@@ -661,6 +693,10 @@ function viewSettings() {
     <div class="set-row"><span class="si">🔔</span><span class="st">Daily nudge<small>Only if habits are still open that day.</small></span>${seg('reminder', s.reminder.on ? 'on' : 'off', [['off', 'Off'], ['on', 'On']])}</div>
     ${s.reminder.on ? `<div class="set-row"><span class="si">⏰</span><span class="st">Time</span><input class="input" type="time" id="set-remind" value="${esc(s.reminder.time)}" style="max-width:160px;padding:0 12px"></div>` : ''}
   </div><p class="hint" style="margin:8px 4px 0">Tip: set it for the evening — late enough to know what’s left, early enough to do the tiny version.</p></div>` : ''}
+  ${NATIVE ? `<div class="set-group"><h3>Home screen widgets</h3><div class="set-card">
+    <button class="set-row" data-action="pin-widget" data-w="today"><span class="si">📋</span><span class="st">Today list<small>Tick habits off right from your home screen.</small></span><span class="btn sm">Add</span></button>
+    <button class="set-row" data-action="pin-widget" data-w="ring"><span class="si">⭕</span><span class="st">Progress ring<small>Today’s % and your best streak, at a glance.</small></span><span class="btn sm">Add</span></button>
+  </div><p class="hint" style="margin:8px 4px 0">Or long-press your home screen → Widgets → Ember. Widgets follow your theme.</p></div>` : ''}
   ${NATIVE ? '' : `<div class="set-group"><h3>App</h3><div class="set-card">
     ${installed ? `<div class="set-row"><span class="si">✅</span><span class="st">Installed<small>Ember is running as an app on this device.</small></span></div>`
       : `<button class="set-row" data-action="install"><span class="si">📲</span><span class="st">Install on home screen<small>${UI.installEvt ? 'Full-screen, offline, like a native app.' : 'In Chrome: ⋮ menu → “Add to Home screen” or “Install app”.'}</small></span></button>`}
@@ -984,6 +1020,11 @@ const actions = {
     S.settings[k] = v; save(); render();
   },
   export: exportData,
+  'pin-widget': el => {
+    let ok = false;
+    try { ok = NATIVE && NATIVE.pinWidget && NATIVE.pinWidget(el.dataset.w); } catch (e) { }
+    toast(ok ? 'Confirm on the pop-up to place the widget' : 'Long-press your home screen → Widgets → Ember');
+  },
   import: () => document.getElementById('import-file').click(),
   reset: () => {
     if (!confirm('Erase all habits and history on this device?')) return;
@@ -1070,5 +1111,6 @@ window.emberBack = function () {
 window.checkRollover = checkRollover;
 window.toast = toast;
 
+emberSyncFromNative();
 render();
 syncReminder();

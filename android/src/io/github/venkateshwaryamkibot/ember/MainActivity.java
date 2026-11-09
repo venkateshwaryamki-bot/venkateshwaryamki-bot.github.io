@@ -1,6 +1,9 @@
 package io.github.venkateshwaryamkibot.ember;
 
 import android.app.Activity;
+import android.app.PendingIntent;
+import android.appwidget.AppWidgetManager;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -18,6 +21,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import java.io.OutputStream;
+import java.lang.reflect.Method;
 import java.nio.charset.Charset;
 
 /** Hosts the Ember web app (bundled in assets/www) full-screen, offline. */
@@ -89,7 +93,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         web.onResume();
-        js("window.checkRollover && window.checkRollover()");
+        js("window.emberSyncFromNative && window.emberSyncFromNative(); window.checkRollover && window.checkRollover()");
     }
 
     @Override
@@ -178,6 +182,33 @@ public class MainActivity extends Activity {
                     d.setSystemUiVisibility(light ? (f | lightFlags) : (f & ~lightFlags));
                 }
             });
+        }
+
+        @JavascriptInterface
+        public void setWidgetData(String json) {
+            WidgetData.setFromJs(MainActivity.this, json);
+            Widgets.updateAll(MainActivity.this);
+        }
+
+        @JavascriptInterface
+        public String takeActions() {
+            return WidgetData.takeActions(MainActivity.this);
+        }
+
+        /** Ask the launcher to place a widget (Android 8+). Returns false if unsupported. */
+        @JavascriptInterface
+        public boolean pinWidget(String which) {
+            if (Build.VERSION.SDK_INT < 26) return false;
+            try {
+                AppWidgetManager m = AppWidgetManager.getInstance(MainActivity.this);
+                Method supported = AppWidgetManager.class.getMethod("isRequestPinAppWidgetSupported");
+                if (!(Boolean) supported.invoke(m)) return false;
+                Method pin = AppWidgetManager.class.getMethod("requestPinAppWidget", ComponentName.class, Bundle.class, PendingIntent.class);
+                Class<?> cls = "ring".equals(which) ? RingWidget.class : TodayWidget.class;
+                return (Boolean) pin.invoke(m, new ComponentName(MainActivity.this, cls), null, null);
+            } catch (Exception e) {
+                return false;
+            }
         }
 
         @JavascriptInterface
