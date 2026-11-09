@@ -8,10 +8,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.RectF;
-import android.graphics.SweepGradient;
 import android.net.Uri;
 import android.os.Build;
 import android.widget.RemoteViews;
@@ -29,8 +27,8 @@ final class Widgets {
     static final int FLAG_IMMUTABLE = 0x04000000;
     static final int FLAG_MUTABLE = 0x02000000;
 
-    static final int TEXT_DARK = 0xFFF3F4F8, MUTED_DARK = 0xFF959BB0;
-    static final int TEXT_LIGHT = 0xFF17181E, MUTED_LIGHT = 0xFF696D7C;
+    static final int TEXT_DARK = 0xFFEDEDEF, MUTED_DARK = 0xFFA1A1AA;
+    static final int TEXT_LIGHT = 0xFF121214, MUTED_LIGHT = 0xFF5C5C66;
 
     private Widgets() { }
 
@@ -74,22 +72,16 @@ final class Widgets {
         size = Math.max(48, Math.min(size, 360));
         Bitmap b = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas c = new Canvas(b);
-        float stroke = size * 0.11f, half = stroke / 2f, cx = size / 2f;
+        float stroke = size * 0.095f, half = stroke / 2f;
         RectF r = new RectF(half, half, size - half, size - half);
         Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
         p.setStyle(Paint.Style.STROKE);
         p.setStrokeWidth(stroke);
         p.setStrokeCap(Paint.Cap.ROUND);
-        p.setColor(light ? 0xFFECE7DF : 0xFF262A36);
+        p.setColor(light ? 0xFFE6E6E1 : 0xFF26262B);
         c.drawArc(r, 0, 360, false, p);
         if (pct > 0) {
-            SweepGradient g = new SweepGradient(cx, cx,
-                    new int[]{0xFFFF5E62, 0xFFFF7A45, 0xFFFFB547, 0xFFFFB547},
-                    new float[]{0f, 0.45f, 0.95f, 1f});
-            Matrix m = new Matrix();
-            m.setRotate(-95, cx, cx);
-            g.setLocalMatrix(m);
-            p.setShader(g);
+            p.setColor(light ? 0xFFF2692B : 0xFFFF7A3D);
             c.drawArc(r, -90, 360f * Math.min(1f, pct), false, p);
         }
         return b;
@@ -97,6 +89,17 @@ final class Widgets {
 
     static String pct(int due, int ok) {
         return due == 0 ? "–" : String.format(Locale.US, "%d%%", Math.round(100f * ok / due));
+    }
+
+    /** Decode a habit icon the web app rasterised for us (base64 PNG), or null. */
+    static Bitmap icon(String b64) {
+        if (b64 == null || b64.isEmpty()) return null;
+        try {
+            byte[] raw = android.util.Base64.decode(b64, android.util.Base64.DEFAULT);
+            return android.graphics.BitmapFactory.decodeByteArray(raw, 0, raw.length);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     static int color(JSONObject h) {

@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="ember_bg">#FF0A0B10</color>
+    <color name="ember_bg">#FF0C0C0E</color>
     <color name="ember_icon_bg">#FF14121A</color>
     <style name="EmberTheme" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/ember_bg</item>
         <item name="android:colorBackground">@color/ember_bg</item>
         <item name="android:statusBarColor">@color/ember_bg</item>
         <item name="android:navigationBarColor">@color/ember_bg</item>
-        <item name="android:colorAccent">#FFFF7A45</item>
-        <item name="android:colorPrimary">#FF0A0B10</item>
-        <item name="android:colorPrimaryDark">#FF0A0B10</item>
+        <item name="android:colorAccent">#FFFF7A3D</item>
+        <item name="android:colorPrimary">#FF0C0C0E</item>
+        <item name="android:colorPrimaryDark">#FF0C0C0E</item>
     </style>
 </resources>

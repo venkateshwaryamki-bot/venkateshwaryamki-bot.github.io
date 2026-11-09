@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
   <title>Ember — Habit Tracker</title>
   <meta name="description" content="Ember — a beautiful, science-backed habit tracker. Small habits, kept alive daily." />
-  <meta name="theme-color" content="#0A0B10" />
+  <meta name="theme-color" content="#0C0C0E" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
@@ -18,31 +18,17 @@
   <div id="app">
     <main id="view" aria-live="polite"></main>
     <nav class="tabbar" id="tabbar" aria-label="Main">
-      <button class="tab" data-action="tab" data-tab="today" aria-label="Today">
-        <svg viewBox="0 0 24 24"><path d="M12 3c.9 3.1 4.6 4.9 4.6 9.3A4.6 4.6 0 0 1 12 17a4.6 4.6 0 0 1-4.6-4.7c0-1.8.8-3 1.7-4 .2 1.5 1 2.4 2 2.7C10.6 8.2 11 5.5 12 3Z"/><path d="M5 21h14"/></svg>
-        <span>Today</span>
-      </button>
-      <button class="tab" data-action="tab" data-tab="progress" aria-label="Progress">
-        <svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
-        <span>Progress</span>
-      </button>
-      <button class="fab" data-action="new" aria-label="New habit">
-        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-      </button>
-      <button class="tab" data-action="tab" data-tab="habits" aria-label="Habits">
-        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4.5" rx="2"/><rect x="3" y="10" width="18" height="4.5" rx="2"/><rect x="3" y="16" width="12" height="4.5" rx="2"/></svg>
-        <span>Habits</span>
-      </button>
-      <button class="tab" data-action="tab" data-tab="settings" aria-label="Settings">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.2-4 4.3-6 8-6s6.8 2 8 6"/></svg>
-        <span>You</span>
-      </button>
+      <button class="tab" data-action="tab" data-tab="today" aria-label="Today"><span class="pillbg"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></svg></span><span>Today</span></button>
+      <button class="tab" data-action="tab" data-tab="progress" aria-label="Progress"><span class="pillbg"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16" /><path d="M18 17V9" /><path d="M13 17V5" /><path d="M8 17v-3" /></svg></span><span>Progress</span></button>
+      <button class="tab" data-action="tab" data-tab="habits" aria-label="Habits"><span class="pillbg"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 17 2 2 4-4" /><path d="m3 7 2 2 4-4" /><path d="M13 6h8" /><path d="M13 12h8" /><path d="M13 18h8" /></svg></span><span>Habits</span></button>
+      <button class="tab" data-action="tab" data-tab="settings" aria-label="You"><span class="pillbg"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="5" /><path d="M20 21a8 8 0 0 0-16 0" /></svg></span><span>You</span></button>
     </nav>
   </div>
   <div id="sheet-root"></div>
   <div id="toast" role="status"></div>
   <canvas id="confetti" aria-hidden="true"></canvas>
   <input type="file" id="import-file" accept="application/json,.json" hidden />
+  <script src="icons.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

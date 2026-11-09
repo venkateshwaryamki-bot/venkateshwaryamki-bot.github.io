@@ -38,7 +38,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         web = new WebView(this);
-        web.setBackgroundColor(Color.parseColor("#0A0B10"));
+        web.setBackgroundColor(Color.parseColor("#0C0C0E"));
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setVerticalScrollBarEnabled(false);
         setContentView(web);
@@ -171,7 +171,7 @@ public class MainActivity extends Activity {
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    int c = Color.parseColor(light ? "#F6F3EE" : "#0A0B10");
+                    int c = Color.parseColor(light ? "#F6F6F3" : "#0C0C0E");
                     Window w = getWindow();
                     w.setStatusBarColor(c);
                     w.setNavigationBarColor(c);

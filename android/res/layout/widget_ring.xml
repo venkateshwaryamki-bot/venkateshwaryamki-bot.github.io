@@ -13,13 +13,13 @@
         <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
             android:orientation="vertical" android:gravity="center">
             <TextView android:id="@+id/pct" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:textSize="22sp" android:textStyle="bold" android:textColor="#FFF3F4F8" />
+                android:textSize="22sp" android:textStyle="bold" android:textColor="#FFEDEDEF" />
             <TextView android:id="@+id/frac" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:textSize="11sp" android:textColor="#FF959BB0" />
+                android:textSize="11sp" android:textColor="#FFA1A1AA" />
         </LinearLayout>
     </FrameLayout>
 
     <TextView android:id="@+id/streak" android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_marginTop="8dp" android:textSize="12.5sp" android:textStyle="bold" android:singleLine="true"
-        android:textColor="#FFFFB547" />
+        android:textColor="#FFEDEDEF" android:drawablePadding="4dp" android:gravity="center_vertical" />
 </LinearLayout>

@@ -4,16 +4,28 @@
 /* ================= Constants ================= */
 const STORE = 'ember.v1';
 const NATIVE = window.EmberAndroid || null; // present inside the Android app
-const VERSION = '1.0.0';
-const COLORS = ['#FF6B6B', '#FF8A3D', '#FFC23D', '#A6E35A', '#3DDC97', '#2CC7C9', '#4DA8FF', '#7C7CFF', '#B26BFF', '#FF6BC1'];
-const EMOJIS = ['💧', '🧘', '📖', '💪', '🏃', '🚶', '✍️', '😴', '📵', '🥗', '🙏', '🧠', '🎯', '🧹', '☀️', '💰',
-  '🎸', '🎨', '💊', '🦷', '🍎', '🚭', '🚴', '🏊', '🤸', '📝', '⏰', '❤️', '🌱', '💻', '🗣️', '🎧',
-  '🛏️', '🚿', '🧴', '🍵', '📞', '🌊', '🔥', '⭐'];
+const VERSION = '1.2.0';
+const COLORS = ['#F2685B', '#F28C38', '#E9B23F', '#93C83F', '#34C38F', '#26B5B0', '#3FA2F2', '#6F7CF2', '#A26EF2', '#E8609E'];
+const OLD_COLORS = ['#FF6B6B', '#FF8A3D', '#FFC23D', '#A6E35A', '#3DDC97', '#2CC7C9', '#4DA8FF', '#7C7CFF', '#B26BFF', '#FF6BC1'];
+const HABIT_ICONS = ['droplet', 'flower-2', 'book-open', 'dumbbell', 'footprints', 'bike', 'waves', 'activity',
+  'pen-line', 'notebook-pen', 'moon', 'bed', 'sun', 'sunrise', 'smartphone', 'laptop',
+  'code', 'brain', 'target', 'timer', 'alarm-clock', 'salad', 'apple', 'carrot',
+  'glass-water', 'coffee', 'pill', 'heart', 'hand-heart', 'smile', 'sprout', 'leaf',
+  'sparkles', 'piggy-bank', 'guitar', 'music', 'palette', 'camera', 'languages', 'graduation-cap',
+  'headphones', 'mountain', 'cigarette-off', 'ban', 'shower-head', 'phone', 'flame', 'star'];
+const EMOJI_ICON = {
+  '💧': 'droplet', '🧘': 'flower-2', '📖': 'book-open', '💪': 'dumbbell', '🏃': 'footprints', '🚶': 'footprints', '✍️': 'pen-line',
+  '😴': 'moon', '📵': 'smartphone', '🥗': 'salad', '🙏': 'hand-heart', '🧠': 'brain', '🎯': 'target', '🧹': 'sparkles', '☀️': 'sun',
+  '💰': 'piggy-bank', '🎸': 'guitar', '🎨': 'palette', '💊': 'pill', '🦷': 'smile', '🍎': 'apple', '🚭': 'cigarette-off', '🚴': 'bike',
+  '🏊': 'waves', '🤸': 'activity', '📝': 'notebook-pen', '⏰': 'alarm-clock', '❤️': 'heart', '🌱': 'sprout', '💻': 'laptop',
+  '🗣️': 'languages', '🎧': 'headphones', '🛏️': 'bed', '🚿': 'shower-head', '🧴': 'droplet', '🍵': 'coffee', '📞': 'phone',
+  '🌊': 'waves', '🔥': 'flame', '⭐': 'star',
+};
 const TIMES = [
-  { id: 'morning', label: 'Morning', icon: '🌅' },
-  { id: 'afternoon', label: 'Afternoon', icon: '☀️' },
-  { id: 'evening', label: 'Evening', icon: '🌙' },
-  { id: 'anytime', label: 'Anytime', icon: '✨' },
+  { id: 'morning', label: 'Morning', icon: 'sunrise' },
+  { id: 'afternoon', label: 'Afternoon', icon: 'sun' },
+  { id: 'evening', label: 'Evening', icon: 'moon' },
+  { id: 'anytime', label: 'Anytime', icon: 'infinity' },
 ];
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -21,20 +33,20 @@ const MILESTONES = [3, 7, 14, 21, 30, 50, 66, 100, 150, 200, 250, 365, 500, 1000
 const STRENGTH_ALPHA = 0.07; // exponential smoothing per scheduled day
 
 const TEMPLATES = [
-  { name: 'Drink water', emoji: '💧', color: '#4DA8FF', target: 8, unit: 'glasses', time: 'anytime', freq: { type: 'daily' }, identity: 'takes care of my body', stack: 'wake up', tiny: 'Drink one glass' },
-  { name: 'Meditate', emoji: '🧘', color: '#B26BFF', target: 1, time: 'morning', freq: { type: 'daily' }, identity: 'stays calm under pressure', stack: 'brush my teeth', tiny: 'Take 3 slow breaths' },
-  { name: 'Read', emoji: '📖', color: '#FFC23D', target: 1, time: 'evening', freq: { type: 'daily' }, identity: 'is always learning', stack: 'get into bed', tiny: 'Read one page' },
-  { name: 'Workout', emoji: '💪', color: '#FF6B6B', target: 1, time: 'anytime', freq: { type: 'weekly', times: 4 }, identity: 'does the hard things', stack: 'finish work', tiny: 'Put on workout clothes' },
-  { name: 'Walk 10 minutes', emoji: '🚶', color: '#3DDC97', target: 1, time: 'afternoon', freq: { type: 'daily' }, identity: 'moves every day', stack: 'eat lunch', tiny: 'Walk to the end of the street' },
-  { name: 'Journal', emoji: '✍️', color: '#FF6BC1', target: 1, time: 'evening', freq: { type: 'daily' }, identity: 'reflects and grows', stack: 'finish dinner', tiny: 'Write one sentence' },
-  { name: 'Sleep by 11 PM', emoji: '😴', color: '#7C7CFF', target: 1, time: 'evening', freq: { type: 'daily' }, identity: 'protects my energy', stack: 'set my alarm', tiny: 'Phone on the charger, outside the bedroom' },
-  { name: 'No phone first hour', emoji: '📵', color: '#2CC7C9', target: 1, time: 'morning', freq: { type: 'daily' }, identity: 'owns my attention', stack: 'wake up', tiny: 'No phone for the first 5 minutes' },
-  { name: 'Gratitude', emoji: '🙏', color: '#FF8A3D', target: 3, unit: 'things', time: 'morning', freq: { type: 'daily' }, identity: 'notices the good', stack: 'sit down for breakfast', tiny: 'Name one good thing' },
-  { name: 'Deep work', emoji: '🎯', color: '#A6E35A', target: 1, time: 'morning', freq: { type: 'days', days: [1, 2, 3, 4, 5] }, identity: 'does focused, meaningful work', stack: 'open my laptop', tiny: 'Two focused minutes, notifications off' },
-  { name: 'Eat greens', emoji: '🥗', color: '#A6E35A', target: 1, time: 'afternoon', freq: { type: 'daily' }, identity: 'fuels my body well', stack: 'plate my lunch', tiny: 'One bite of vegetables' },
-  { name: 'Tidy up', emoji: '🧹', color: '#2CC7C9', target: 1, time: 'evening', freq: { type: 'daily' }, identity: 'keeps a calm space', stack: 'brush my teeth at night', tiny: 'Put away one thing' },
-  { name: 'Morning sunlight', emoji: '☀️', color: '#FFC23D', target: 1, time: 'morning', freq: { type: 'daily' }, identity: 'starts the day with energy', stack: 'make my tea', tiny: 'Step outside for one minute' },
-  { name: 'Save money', emoji: '💰', color: '#3DDC97', target: 1, time: 'anytime', freq: { type: 'daily' }, identity: 'builds wealth patiently', stack: 'get paid or make a purchase', tiny: 'Skip one impulse buy' },
+  { name: 'Drink water', icon: 'droplet', emoji: '💧', color: '#3FA2F2', target: 8, unit: 'glasses', time: 'anytime', freq: { type: 'daily' }, identity: 'takes care of my body', stack: 'wake up', tiny: 'Drink one glass' },
+  { name: 'Meditate', icon: 'flower-2', emoji: '🧘', color: '#A26EF2', target: 1, time: 'morning', freq: { type: 'daily' }, identity: 'stays calm under pressure', stack: 'brush my teeth', tiny: 'Take 3 slow breaths' },
+  { name: 'Read', icon: 'book-open', emoji: '📖', color: '#E9B23F', target: 1, time: 'evening', freq: { type: 'daily' }, identity: 'is always learning', stack: 'get into bed', tiny: 'Read one page' },
+  { name: 'Workout', icon: 'dumbbell', emoji: '💪', color: '#F2685B', target: 1, time: 'anytime', freq: { type: 'weekly', times: 4 }, identity: 'does the hard things', stack: 'finish work', tiny: 'Put on workout clothes' },
+  { name: 'Walk 10 minutes', icon: 'footprints', emoji: '🚶', color: '#34C38F', target: 1, time: 'afternoon', freq: { type: 'daily' }, identity: 'moves every day', stack: 'eat lunch', tiny: 'Walk to the end of the street' },
+  { name: 'Journal', icon: 'pen-line', emoji: '✍️', color: '#E8609E', target: 1, time: 'evening', freq: { type: 'daily' }, identity: 'reflects and grows', stack: 'finish dinner', tiny: 'Write one sentence' },
+  { name: 'Sleep by 11 PM', icon: 'moon', emoji: '😴', color: '#6F7CF2', target: 1, time: 'evening', freq: { type: 'daily' }, identity: 'protects my energy', stack: 'set my alarm', tiny: 'Phone on the charger, outside the bedroom' },
+  { name: 'No phone first hour', icon: 'smartphone', emoji: '📵', color: '#26B5B0', target: 1, time: 'morning', freq: { type: 'daily' }, identity: 'owns my attention', stack: 'wake up', tiny: 'No phone for the first 5 minutes' },
+  { name: 'Gratitude', icon: 'hand-heart', emoji: '🙏', color: '#F28C38', target: 3, unit: 'things', time: 'morning', freq: { type: 'daily' }, identity: 'notices the good', stack: 'sit down for breakfast', tiny: 'Name one good thing' },
+  { name: 'Deep work', icon: 'target', emoji: '🎯', color: '#93C83F', target: 1, time: 'morning', freq: { type: 'days', days: [1, 2, 3, 4, 5] }, identity: 'does focused, meaningful work', stack: 'open my laptop', tiny: 'Two focused minutes, notifications off' },
+  { name: 'Eat greens', icon: 'salad', emoji: '🥗', color: '#93C83F', target: 1, time: 'afternoon', freq: { type: 'daily' }, identity: 'fuels my body well', stack: 'plate my lunch', tiny: 'One bite of vegetables' },
+  { name: 'Tidy up', icon: 'sparkles', emoji: '🧹', color: '#26B5B0', target: 1, time: 'evening', freq: { type: 'daily' }, identity: 'keeps a calm space', stack: 'brush my teeth at night', tiny: 'Put away one thing' },
+  { name: 'Morning sunlight', icon: 'sunrise', emoji: '☀️', color: '#E9B23F', target: 1, time: 'morning', freq: { type: 'daily' }, identity: 'starts the day with energy', stack: 'make my tea', tiny: 'Step outside for one minute' },
+  { name: 'Save money', icon: 'piggy-bank', emoji: '💰', color: '#34C38F', target: 1, time: 'anytime', freq: { type: 'daily' }, identity: 'builds wealth patiently', stack: 'get paid or make a purchase', tiny: 'Skip one impulse buy' },
 ];
 
 const PRINCIPLES = [
@@ -56,20 +68,10 @@ const PRINCIPLES = [
 ];
 
 /* ================= Icons ================= */
-const I = {
-  tick: '<svg class="tick" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-  left: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
-  right: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
-  close: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>',
-  edit: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/><path d="M13.5 6.5l4 4"/></svg>',
-  up: '<svg viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>',
-  down: '<svg viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></svg>',
-  archive: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="1.5"/><path d="M5 9v10h14V9M10 13h4"/></svg>',
-  restore: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.6"/><path d="M4 4v4.6h4.6"/></svg>',
-  trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
-  flame: '<svg viewBox="0 0 24 24"><path d="M12 2.5c1.2 4 6 6.4 6 12A6 6 0 0 1 12 20.5a6 6 0 0 1-6-6c0-2.4 1-4 2.2-5.3.3 2 1.3 3.2 2.6 3.6C10.2 9.4 10.8 5.7 12 2.5Z"/></svg>',
-  gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>',
-};
+const ICONS = window.ICONS || {};
+const ic = (name, cls = '') => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ICONS.sparkle || ''}</svg>`;
+const glyph = h => h.icon && ICONS[h.icon] ? ic(h.icon) : `<span>${esc(h.emoji || '⭐')}</span>`;
+const tile = (h, size = '') => `<div class="tile ${size}" style="--c:${h.color}">${glyph(h)}</div>`;
 
 /* ================= Date helpers (local time, YYYY-MM-DD keys) ================= */
 const pad = n => String(n).padStart(2, '0');
@@ -102,12 +104,20 @@ function load() {
   return defaultState();
 }
 let S = load();
+// v1.2 design: line icons instead of emoji, refined colour palette
+(function migrate() {
+  for (const h of S.habits) {
+    if (!h.icon && EMOJI_ICON[h.emoji]) h.icon = EMOJI_ICON[h.emoji];
+    const i = OLD_COLORS.indexOf(String(h.color).toUpperCase());
+    if (i >= 0) h.color = COLORS[i];
+  }
+})();
 function save() {
   try { localStorage.setItem(STORE, JSON.stringify(S)); }
   catch (e) { toast('Couldn’t save — storage is blocked or full'); }
 }
 
-const UI = { tab: 'today', date: today(), justDone: null, sheet: null, installEvt: null, rings: {}, onbPicks: null };
+const UI = { tab: 'today', date: today(), justDone: null, sheet: null, installEvt: null, rings: {}, onbPicks: null, iconPng: {} };
 
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -254,12 +264,12 @@ function check(id, k = UI.date) {
   if (nowDone && k === today()) {
     const st = streak(h);
     if (MILESTONES.includes(st)) {
-      setTimeout(() => { confetti(h.color); toast(`${h.emoji} ${st}-${isWeekly(h) ? 'week' : 'day'} streak on ${h.name}!`); }, 250);
+      setTimeout(() => { confetti(h.color); toast(`${st}-${isWeekly(h) ? 'week' : 'day'} streak · ${h.name}`); }, 250);
       return;
     }
   }
   if (after.due && after.ok === after.due && before.ok < before.due) {
-    setTimeout(() => { confetti(); toast(k === today() ? 'Perfect day. Every promise kept. 🔥' : 'That day is now perfect ✨'); buzz([20, 60, 30]); }, 250);
+    setTimeout(() => { confetti(); toast(k === today() ? 'Perfect day — every promise kept' : 'That day is now complete'); buzz([20, 60, 30]); }, 250);
   }
 }
 function setCount(id, n, k = UI.date) {
@@ -276,7 +286,7 @@ function toggleSkip(id, k = UI.date) {
   const L = logOf(h);
   if (L[k] === 'skip') delete L[k]; else L[k] = 'skip';
   save(); buzz(10); render(); refreshSheet();
-  if (L[k] === 'skip') toast('Rest day logged — your streak is safe 🌙');
+  if (L[k] === 'skip') toast('Rest day logged — your streak is safe');
 }
 function toggleCell(id, k) {
   const h = byId(id); if (!h || k > today()) return;
@@ -287,7 +297,7 @@ function toggleCell(id, k) {
 }
 function addHabit(t) {
   const h = {
-    id: uid(), name: t.name.trim(), emoji: t.emoji || '⭐', color: t.color || COLORS[1],
+    id: uid(), name: t.name.trim(), icon: t.icon || '', emoji: t.emoji || '⭐', color: t.color || COLORS[1],
     target: Math.max(1, t.target | 0 || 1), unit: (t.unit || '').trim(),
     time: t.time || 'anytime',
     freq: t.freq.type === 'days' ? { type: 'days', days: [...t.freq.days] }
@@ -311,7 +321,7 @@ function buzz(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e
 let toastTimer;
 function toast(msg, action, fn) {
   const t = document.getElementById('toast');
-  t.innerHTML = `<span>${esc(msg)}</span>${action ? `<button>${esc(action)}</button>` : ''}`;
+  t.innerHTML = `${ic('circle-check', 'sm')}<span>${esc(msg)}</span>${action ? `<button>${esc(action)}</button>` : ''}`;
   if (action) t.querySelector('button').onclick = () => { t.classList.remove('show'); fn(); };
   t.classList.add('show');
   clearTimeout(toastTimer);
@@ -380,7 +390,7 @@ function widgetPayload() {
   const habits = active().slice().sort((a, b) => order.indexOf(a.time) - order.indexOf(b.time) || a.order - b.order).map(h => {
     const weekly = isWeekly(h), done = isDone(h, t);
     return {
-      id: h.id, name: h.name, emoji: h.emoji, color: h.color, target: h.target, unit: h.unit, time: h.time,
+      id: h.id, name: h.name, emoji: h.emoji, icon: widgetIcon(h), color: h.color, target: h.target, unit: h.unit, time: h.time,
       freq: h.freq, created: h.created, stack: h.stack, tiny: h.tiny,
       count: countOf(h, t), skip: isSkip(h, t),
       weekDone: weekly ? weekCount(h, t) - (done ? 1 : 0) : 0,
@@ -388,6 +398,26 @@ function widgetPayload() {
     };
   });
   return { date: t, weekStart: S.settings.weekStart, theme: document.documentElement.dataset.theme, habits };
+}
+// Widgets can't draw SVG, so each habit icon is rasterised once to a small PNG.
+function widgetIcon(h) {
+  if (!h.icon || !ICONS[h.icon]) return '';
+  const k = h.icon + '|' + h.color;
+  if (UI.iconPng[k] != null) return UI.iconPng[k] === 'pending' ? '' : UI.iconPng[k];
+  UI.iconPng[k] = 'pending';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 24 24" fill="none" stroke="${h.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[h.icon]}</svg>`;
+  const img = new Image();
+  img.onload = () => {
+    try {
+      const c = document.createElement('canvas'); c.width = c.height = 96;
+      c.getContext('2d').drawImage(img, 0, 0, 96, 96);
+      UI.iconPng[k] = c.toDataURL('image/png').split(',')[1];
+    } catch (e) { UI.iconPng[k] = ''; }
+    clearTimeout(UI.iconSyncT); UI.iconSyncT = setTimeout(nativeSync, 50);
+  };
+  img.onerror = () => { UI.iconPng[k] = ''; };
+  img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  return '';
 }
 // Apply habit taps made on the home-screen widget while the app was closed
 function emberSyncFromNative() {
@@ -410,28 +440,26 @@ function habitCard(h, k) {
   const done = isDone(h, k), skip = isSkip(h, k), c = countOf(h, k);
   const st = streak(h);
   const meta = [];
-  if (st > 0) meta.push(`<span class="fire">🔥 ${st}${isWeekly(h) ? 'w' : ''}</span>`);
-  if (isWeekly(h)) meta.push(`<span>${weekCount(h, k)}/${h.freq.times} this week</span>`);
+  if (st > 0) meta.push(`<span class="streak">${ic('flame', 'xs')}${st}${isWeekly(h) ? 'w' : ''}</span>`);
   if (skip) meta.push('<span>Rest day</span>');
-  else if (h.target > 1) meta.push(`<span>${c}/${h.target} ${esc(h.unit)}</span>`);
-  if (!skip && h.stack && !done) meta.push(`<span class="ell">After I ${esc(h.stack)}</span>`);
-  else if (!skip && !st && !done && h.tiny) meta.push(`<span class="ell">Tiny: ${esc(h.tiny)}</span>`);
-  if (!meta.length) meta.push(`<span>${freqText(h)}</span>`);
-  const metaHtml = meta.join('<i class="sep"></i>');
-  let btn;
-  if (h.target > 1) {
-    btn = `${done ? I.tick : `<span class="cnt">${c}<small>/${h.target}</small></span>`}
-      <span class="mini">${ring(Math.min(1, c / h.target), 50, 3, h.color, null, { noAnim: true })}</span>`;
-  } else btn = I.tick;
+  else if (isWeekly(h)) meta.push(`<span>${weekCount(h, k)} of ${h.freq.times} this week</span>`);
+  else if (h.target > 1) meta.push(`<span>${c} of ${h.target}${h.unit ? ' ' + esc(h.unit) : ''}</span>`);
+  if (!skip && !done && h.stack && !isWeekly(h) && h.target <= 1) meta.push(`<span class="ell">After I ${esc(h.stack)}</span>`);
+  else if (!skip && !done && !st && h.tiny && h.target <= 1 && !isWeekly(h)) meta.push(`<span class="ell">Start tiny: ${esc(h.tiny)}</span>`);
+  if (!meta.length) meta.push(`<span>${done ? 'Completed' : freqText(h)}</span>`);
+  const counter = h.target > 1 && !done;
+  const btn = counter
+    ? `<span class="cnt">${c}</span><span class="mini">${ring(Math.min(1, c / h.target), 40, 2.5, h.color, null, { noAnim: true })}</span>`
+    : ic('check');
   return `<div class="habit ${done ? 'is-done' : ''} ${skip ? 'is-skip' : ''} ${UI.justDone === h.id ? 'pop' : ''}"
       style="--c:${h.color}" data-action="open" data-id="${h.id}" role="button" tabindex="0">
-    <div class="h-icon">${h.emoji}</div>
+    ${tile(h)}
     <div class="h-body">
       <div class="h-name">${esc(h.name)}</div>
-      <div class="h-meta">${metaHtml}</div>
-      ${h.target > 1 && !done && !skip ? `<div class="h-bar"><i style="width:${Math.min(100, c / h.target * 100)}%"></i></div>` : ''}
+      <div class="h-meta">${meta.join('<i class="dot"></i>')}</div>
+      ${counter && !skip ? `<div class="h-bar"><i style="width:${Math.min(100, c / h.target * 100)}%"></i></div>` : ''}
     </div>
-    <button class="h-check" data-action="check" data-id="${h.id}" aria-label="${done ? 'Undo' : 'Complete'} ${esc(h.name)}">${btn}</button>
+    <button class="h-check ${counter ? 'counter' : ''}" data-action="check" data-id="${h.id}" aria-label="${done ? 'Undo' : 'Complete'} ${esc(h.name)}">${btn}</button>
   </div>`;
 }
 
@@ -439,18 +467,17 @@ function weekStrip() {
   const t = today(), ws = weekStartKey(UI.date), curWs = weekStartKey(t);
   let days = '';
   for (let i = 0; i < 7; i++) {
-    const k = addDays(ws, i), fut = k > t, p = fut ? { due: 0, ok: 0, pct: 0 } : dayProgress(k);
-    const perfect = p.due > 0 && p.ok === p.due;
-    days += `<button class="day ${k === t ? 'is-today' : ''} ${k === UI.date ? 'is-sel' : ''} ${perfect ? 'is-perfect' : ''}"
+    const k = addDays(ws, i), fut = k > t, p = fut ? { pct: 0 } : dayProgress(k);
+    days += `<button class="day ${k === t ? 'is-today' : ''} ${k === UI.date ? 'is-sel' : ''}"
         data-action="date" data-k="${k}" ${fut ? 'disabled' : ''} aria-label="${fmtDate(k)}">
       <span class="dl">${DOW[dow(k)].slice(0, 1)}</span>
-      <span class="dn">${!perfect && !fut ? ring(p.pct, 32, 3, 'var(--accent)', null, { noAnim: true }) : ''}<span>${parse(k).getDate()}</span></span>
+      <span class="dn">${!fut ? ring(p.pct, 36, 2.5, 'var(--accent)', null, { noAnim: true }) : ''}<span>${parse(k).getDate()}</span></span>
     </button>`;
   }
   return `<div class="week">
-    <button class="wk-nav" data-action="week" data-dir="-1" aria-label="Previous week">${I.left}</button>
+    <button class="wk-nav" data-action="week" data-dir="-1" aria-label="Previous week">${ic('chevron-left', 'sm')}</button>
     <div class="week-days">${days}</div>
-    <button class="wk-nav" data-action="week" data-dir="1" aria-label="Next week" ${ws >= curWs ? 'disabled' : ''}>${I.right}</button>
+    <button class="wk-nav" data-action="week" data-dir="1" aria-label="Next week" ${ws >= curWs ? 'disabled' : ''}>${ic('chevron-right', 'sm')}</button>
   </div>`;
 }
 
@@ -466,55 +493,63 @@ function missedYesterday() {
     return false;
   });
 }
+function weekToDate() {
+  const t = today(); let due = 0, ok = 0;
+  for (let k = weekStartKey(t); k <= t; k = addDays(k, 1)) { const p = dayProgress(k); due += p.due; ok += p.ok; }
+  return due ? ok / due : null;
+}
 
 function viewToday() {
   const list = active();
   const k = UI.date, t = today(), isToday = k === t;
   const name = S.settings.name ? `, ${esc(S.settings.name)}` : '';
   const head = `<header class="top">
-    <div><div class="eyebrow">${fmtDate(t, true)}</div><h1>${greeting()}${name}</h1></div>
-    <button class="icon-btn" data-action="tab" data-tab="settings" aria-label="Settings">${I.gear}</button>
+    <div><div class="eyebrow">${fmtDate(t, true)}</div><h1 class="t-display">${greeting()}${name}</h1></div>
+    <button class="icon-btn accent-btn" data-action="new" aria-label="New habit">${ic('plus')}</button>
   </header>`;
   if (!list.length) {
     return head + `<div class="card empty">
-      <div class="art">🔥</div><h2>Light your first ember</h2>
-      <p>Start with one habit so small it feels almost too easy. Consistency first, intensity later.</p>
-      <button class="btn primary" data-action="new">Create a habit</button>
+      <div class="e-art">${ic('flame')}</div><div class="t-title">Start with one small habit</div>
+      <p>Pick something so small it feels almost too easy. Consistency first — intensity can come later.</p>
+      <button class="btn primary" data-action="new">${ic('plus', 'sm')}Create a habit</button>
     </div>` + principleCard();
   }
   const p = dayProgress(k);
   const left = p.due - p.ok;
   const bestActive = Math.max(0, ...list.map(streak));
-  let big, small;
-  if (!p.due) { big = 'Nothing scheduled.'; small = 'A free day — rest is part of the system.'; }
-  else if (p.ok === p.due) { big = isToday ? 'Perfect day. Every promise kept.' : 'Perfect day.'; small = 'This is what becoming someone looks like.'; }
-  else if (p.ok === 0) { big = isToday ? 'Start with the easiest one.' : `${left} left that day.`; small = isToday ? 'Momentum beats motivation. One tap.' : 'Tap any habit to log it for that day.'; }
-  else { big = `${left} to go. Keep the chain alive.`; small = `${p.ok} of ${p.due} done${isToday ? ' so far' : ''}.`; }
+  let title, sub;
+  if (!p.due) { title = 'Nothing scheduled'; sub = 'A free day. Rest is part of the system.'; }
+  else if (p.ok === p.due) { title = isToday ? 'Every habit complete' : 'Day complete'; sub = 'This is what becoming someone looks like.'; }
+  else if (p.ok === 0) { title = `${p.due} habit${p.due > 1 ? 's' : ''} ${isToday ? 'today' : 'that day'}`; sub = isToday ? 'Start with the easiest one — momentum beats motivation.' : 'Tap any habit to log it for that day.'; }
+  else { title = `${p.ok} of ${p.due} complete`; sub = `${left} to go. Keep the chain alive.`; }
+  const wtd = weekToDate();
 
-  const hero = `<section class="card hero">
-    <div class="hero-ring">${ring(p.pct, 116, 11, 'grad', 'hero')}
-      <div class="ring-label"><div><div class="pct">${Math.round(p.pct * 100)}<small>%</small></div><div class="sub">${p.ok}/${p.due} done</div></div></div>
+  const summary = `<section class="card">
+    <div class="summary">
+      <div class="ring-wrap">${ring(p.pct, 84, 8, 'var(--accent)', 'hero')}
+        <div class="ring-label"><div class="big">${Math.round(p.pct * 100)}<small>%</small></div></div></div>
+      <div class="s-body"><div class="s-title">${title}</div><div class="s-sub">${sub}</div></div>
     </div>
-    <div class="hero-copy">
-      <div class="big">${big}</div>
-      <div class="small">${small}</div>
-      <div class="pills"><span class="pill">🔥 ${bestActive} best streak</span>${perfectDays(30) ? `<span class="pill">⭐ ${perfectDays(30)} perfect /30d</span>` : ''}</div>
+    <div class="kv">
+      <div><div class="v">${ic('flame', 'xs')}${bestActive}</div><div class="l">Best streak</div></div>
+      <div><div class="v">${perfectDays(30)}</div><div class="l">Perfect days · 30d</div></div>
+      <div><div class="v">${pctTxt(wtd)}</div><div class="l">This week</div></div>
     </div>
   </section>`;
 
   const viewing = !isToday ? `<div class="viewing"><span>Logging ${fmtDate(k)}</span><button data-action="date" data-k="${t}">Back to today</button></div>` : '';
 
-  let banner = '';
+  let notice = '';
   if (isToday) {
     const miss = missedYesterday();
     if (miss.length && S.dismissed.nmt !== t) {
-      banner = `<div class="banner"><span class="bi">🛡️</span><div><b>Never miss twice</b>
-        ${miss.slice(0, 3).map(h => esc(h.name)).join(', ')}${miss.length > 3 ? ` +${miss.length - 3}` : ''} slipped last time. Today, even the tiny version counts.</div>
-        <button class="x" data-action="dismiss" data-what="nmt" aria-label="Dismiss">${I.close}</button></div>`;
+      notice = `<div class="notice"><div class="ni">${ic('shield', 'sm')}</div><div class="nb"><b>Never miss twice</b>
+        ${miss.slice(0, 3).map(h => esc(h.name)).join(', ')}${miss.length > 3 ? ` and ${miss.length - 3} more` : ''} slipped last time. Today, even the two-minute version counts.</div>
+        <button class="x" data-action="dismiss" data-what="nmt" aria-label="Dismiss">${ic('x', 'sm')}</button></div>`;
     } else if (UI.installEvt && !S.dismissed.install) {
-      banner = `<div class="banner"><span class="bi">📲</span><div><b>Install Ember</b>Add it to your home screen for a full-screen app that works offline.
+      notice = `<div class="notice"><div class="ni">${ic('download', 'sm')}</div><div class="nb"><b>Install Ember</b>Full-screen and offline, right from your home screen.
         <div><button class="btn sm primary" data-action="install">Install app</button></div></div>
-        <button class="x" data-action="dismiss" data-what="install" aria-label="Dismiss">${I.close}</button></div>`;
+        <button class="x" data-action="dismiss" data-what="install" aria-label="Dismiss">${ic('x', 'sm')}</button></div>`;
     }
   }
 
@@ -523,21 +558,21 @@ function viewToday() {
     const hs = list.filter(h => h.time === tm.id && scheduled(h, k) && (!isWeekly(h) || !weekMet(h, k) || isDone(h, k)));
     if (!hs.length) continue;
     const ok = hs.filter(h => satisfied(h, k)).length;
-    groups += `<section class="section"><div class="section-head"><h3>${tm.icon} ${tm.label}</h3><span class="count">${ok}/${hs.length}</span></div>
+    groups += `<section class="section"><div class="section-head"><h3>${ic(tm.icon)}${tm.label}</h3><span class="count">${ok}/${hs.length}</span></div>
       <div class="habits">${hs.map(h => habitCard(h, k)).join('')}</div></section>`;
   }
   const met = list.filter(h => isWeekly(h) && scheduled(h, k) && weekMet(h, k) && !isDone(h, k));
   if (met.length) {
-    groups += `<section class="section"><div class="section-head"><h3>✅ Weekly goal reached</h3><span class="count">${met.length}</span></div>
+    groups += `<section class="section"><div class="section-head"><h3>${ic('calendar-check')}Weekly goal reached</h3><span class="count">${met.length}</span></div>
       <div class="habits">${met.map(h => habitCard(h, k)).join('')}</div></section>`;
   }
   const notToday = list.filter(h => !scheduled(h, k) && k >= h.created);
-  const restNote = notToday.length ? `<p class="hint" style="text-align:center;margin-top:16px">Not scheduled ${isToday ? 'today' : 'this day'}: ${notToday.map(h => h.emoji).join(' ')}</p>` : '';
-  return head + hero + weekStrip() + viewing + banner + groups + restNote + principleCard();
+  const restNote = notToday.length ? `<p class="rest-note">${ic('moon', 'xs')}Off ${isToday ? 'today' : 'this day'}: ${notToday.map(h => esc(h.name)).join(', ')}</p>` : '';
+  return head + summary + weekStrip() + viewing + notice + groups + restNote + principleCard();
 }
 function principleCard() {
   const [tag, q] = principleOfDay();
-  return `<section class="principle"><div class="mark">“</div><div class="tag">Today’s principle · ${tag}</div><div class="q">${q}</div></section>`;
+  return `<section class="principle"><div class="tag">${ic('sparkle', 'xs')}Principle · ${tag}</div><div class="q">${q}</div></section>`;
 }
 function perfectDays(n) {
   const t = today(); let c = 0;
@@ -571,8 +606,8 @@ function heatmap(cell, weeks) {
 }
 function viewProgress() {
   const list = active();
-  const head = `<header class="top"><div><div class="eyebrow">Last 30 days</div><h1>Progress</h1></div></header>`;
-  if (!list.length) return head + `<div class="card empty"><div class="art">📈</div><h2>Nothing to measure yet</h2><p>Add a habit and your consistency, streaks and strength will grow here.</p><button class="btn primary" data-action="new">Create a habit</button></div>`;
+  const head = `<header class="top"><div><div class="eyebrow">Last 30 days</div><h1 class="t-display">Progress</h1></div></header>`;
+  if (!list.length) return head + `<div class="card empty"><div class="e-art">${ic('chart-column')}</div><div class="t-title">Nothing to measure yet</div><p>Add a habit and your consistency, streaks and habit strength will build up here.</p><button class="btn primary" data-action="new">${ic('plus', 'sm')}Create a habit</button></div>`;
   const t = today();
   const rates = list.map(h => rate(h, 30)).filter(r => r != null);
   const cons = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : 0;
@@ -589,55 +624,55 @@ function viewProgress() {
     bars += `<div class="bar ${k === t ? 'is-today' : ''}"><div class="col"><i class="${p.pct < .5 ? 'low' : ''}" style="height:${Math.max(p.due ? 4 : 0, p.pct * 100)}%"></i></div><span>${DOW[dow(k)].slice(0, 1)}</span></div>`;
   }
 
-  // Weekday insight over the last 8 weeks
   const wd = Array.from({ length: 7 }, () => ({ due: 0, ok: 0 }));
   for (let i = 1; i <= 56; i++) {
     const k = addDays(t, -i), p = dayProgress(k);
     wd[dow(k)].due += p.due; wd[dow(k)].ok += p.ok;
   }
   const wdr = wd.map((x, i) => ({ i, r: x.due >= 3 ? x.ok / x.due : null })).filter(x => x.r != null);
-  let insights = '';
+  const ins = [];
   if (wdr.length >= 4) {
     const sorted = [...wdr].sort((a, b) => b.r - a.r);
     const hi = sorted[0], lo = sorted[sorted.length - 1];
-    insights += `<div class="insight"><span class="ii">🏆</span><div><b>${DOW[hi.i]}s are your strongest day</b> (${pctTxt(hi.r)}). Whatever your routine is that day — copy it.</div></div>`;
-    if (hi.r - lo.r > .1) insights += `<div class="insight"><span class="ii">🧭</span><div><b>${DOW[lo.i]}s are the weak spot</b> (${pctTxt(lo.r)}). Plan the two-minute versions the night before.</div></div>`;
+    ins.push(['trophy', `<b>${DOW[hi.i]}s are your strongest day</b> at ${pctTxt(hi.r)}. Whatever your routine is that day — copy it.`]);
+    if (hi.r - lo.r > .1) ins.push(['compass', `<b>${DOW[lo.i]}s are the weak spot</b> at ${pctTxt(lo.r)}. Plan the two-minute versions the night before.`]);
   }
   const scored = list.map(h => ({ h, r: rate(h, 30) })).filter(x => x.r != null);
   if (scored.length >= 2) {
     const s = [...scored].sort((a, b) => b.r - a.r);
     const top = s[0], low = s[s.length - 1];
-    insights += `<div class="insight"><span class="ii">${top.h.emoji}</span><div><b>${esc(top.h.name)}</b> is your most reliable habit at ${pctTxt(top.r)}. It’s becoming part of who you are.</div></div>`;
-    if (low.r < .6 && low.h.id !== top.h.id) insights += `<div class="insight"><span class="ii">🌱</span><div><b>${esc(low.h.name)}</b> is at ${pctTxt(low.r)}. Try shrinking it${low.h.tiny ? ` to “${esc(low.h.tiny)}”` : ''} or stacking it after something you never skip.</div></div>`;
+    ins.push(['trending-up', `<b>${esc(top.h.name)}</b> is your most reliable habit at ${pctTxt(top.r)}. It’s becoming part of who you are.`]);
+    if (low.r < .6 && low.h.id !== top.h.id) ins.push(['sprout', `<b>${esc(low.h.name)}</b> is at ${pctTxt(low.r)}. Try shrinking it${low.h.tiny ? ` to “${esc(low.h.tiny)}”` : ''} or stacking it after something you never skip.`]);
   }
-  if (!insights) insights = `<div class="insight"><span class="ii">🔭</span><div>Insights appear after a couple of weeks of tracking. Keep showing up — the data is building.</div></div>`;
+  if (!ins.length) ins.push(['info', 'Insights appear after a couple of weeks of tracking. Keep showing up — the data is building.']);
+  const insights = `<div class="list-card">${ins.map(([i, h]) => `<div class="insight"><div class="ii">${ic(i)}</div><div>${h}</div></div>`).join('')}</div>`;
 
   const rows = list.map(h => {
     const r = rate(h, 30), s = strength(h);
     return `<button class="prow" data-action="open" data-id="${h.id}" style="--c:${h.color}">
-      <div class="h-icon">${h.emoji}</div>
-      <div class="pb"><div class="pn"><span>${esc(h.name)}</span><span>🔥 ${streak(h)} · ${pctTxt(r)}</span></div>
+      ${tile(h, 'sm')}
+      <div class="pb"><div class="pn"><span>${esc(h.name)}</span><span>${Math.round(s * 100)}% · ${strengthLabel(s)}</span></div>
       <div class="track"><i style="width:${(s * 100).toFixed(1)}%"></i></div></div>
     </button>`;
   }).join('');
 
   return head + `<section class="card score">
-      ${ring(cons, 104, 10, 'grad', 'cons')}
+      ${ring(cons, 92, 9, 'var(--accent)', 'cons')}
       <div><div class="num">${Math.round(cons * 100)}<small>%</small></div><div class="lbl">Consistency score</div>
-      ${delta != null ? `<span class="pill delta">${delta >= 0 ? '▲' : '▼'} ${Math.abs(delta)} pts vs previous 30d</span>` : ''}</div>
+      ${delta != null ? `<span class="delta ${delta >= 0 ? 'up' : 'down'}">${ic(delta >= 0 ? 'trending-up' : 'trending-down', 'xs')}${delta >= 0 ? '+' : '−'}${Math.abs(delta)} pts vs prior 30 days</span>` : ''}</div>
     </section>
     <div class="kpis">
-      <div class="kpi"><div class="v">${Math.round(strengthAvg * 100)}%</div><div class="l">Avg habit strength</div></div>
+      <div class="kpi"><div class="v">${Math.round(strengthAvg * 100)}%</div><div class="l">Avg. strength</div></div>
       <div class="kpi"><div class="v">${perfectDays(30)}</div><div class="l">Perfect days</div></div>
       <div class="kpi"><div class="v">${best}</div><div class="l">Longest streak</div></div>
     </div>
-    <section class="section"><div class="section-head"><h3>Last 14 days</h3><span class="count">${total} check-ins all time</span></div>
+    <section class="section"><div class="section-head"><h3>Last 14 days</h3><span class="count">${total} check-ins total</span></div>
       <div class="card"><div class="bars">${bars}</div></div></section>
-    <section class="section"><div class="section-head"><h3>Your year in embers</h3></div>
+    <section class="section"><div class="section-head"><h3>Activity</h3><span class="count">20 weeks</span></div>
       <div class="card">${globalHeatmap(20)}
-      <div class="legend">Less <i class="hm-c"></i><i class="hm-c l1"></i><i class="hm-c l2"></i><i class="hm-c l3"></i><i class="hm-c l4"></i> Perfect</div></div></section>
+      <div class="legend">Less <i class="hm-c"></i><i class="hm-c l1"></i><i class="hm-c l2"></i><i class="hm-c l3"></i><i class="hm-c l4"></i> More</div></div></section>
     <section class="section"><div class="section-head"><h3>Insights</h3></div>${insights}</section>
-    <section class="section"><div class="section-head"><h3>Habit strength</h3><span class="count">bar = strength</span></div>${rows}</section>`;
+    <section class="section"><div class="section-head"><h3>Habit strength</h3></div><div class="list-card">${rows}</div></section>`;
 }
 function rateWindow(h, fromAgo, toAgo) {
   const t = today(); let tot = 0, ok = 0;
@@ -653,26 +688,26 @@ function rateWindow(h, fromAgo, toAgo) {
 /* ---------- Habits (manage) ---------- */
 function viewHabits() {
   const list = active(), arch = archived();
-  const head = `<header class="top"><div><div class="eyebrow">${list.length} active</div><h1>Your habits</h1></div>
-    <button class="icon-btn" data-action="new" aria-label="New habit"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></button></header>`;
-  const row = (h, i, n, isArch) => `<div class="mrow" style="--c:${h.color}">
-    <div class="h-icon">${h.emoji}</div>
+  const head = `<header class="top"><div><div class="eyebrow">${list.length} active</div><h1 class="t-display">Habits</h1></div>
+    <button class="icon-btn accent-btn" data-action="new" aria-label="New habit">${ic('plus')}</button></header>`;
+  const row = (h, i, n, isArch) => `<div class="mrow">
+    ${tile(h, 'sm')}
     <div class="mb" data-action="open" data-id="${h.id}"><div class="mn">${esc(h.name)}</div><div class="ms">${freqText(h)} · ${TIMES.find(t => t.id === h.time).label}${h.target > 1 ? ` · ${h.target} ${esc(h.unit)}` : ''}</div></div>
     <div class="acts">${isArch
-      ? `<button class="mini-btn" data-action="unarchive" data-id="${h.id}" aria-label="Restore">${I.restore}</button><button class="mini-btn" data-action="delete" data-id="${h.id}" aria-label="Delete">${I.trash}</button>`
-      : `<button class="mini-btn" data-action="move" data-dir="-1" data-id="${h.id}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">${I.up}</button>
-         <button class="mini-btn" data-action="move" data-dir="1" data-id="${h.id}" ${i === n - 1 ? 'disabled' : ''} aria-label="Move down">${I.down}</button>
-         <button class="mini-btn" data-action="edit" data-id="${h.id}" aria-label="Edit">${I.edit}</button>`}</div>
+      ? `<button class="mini-btn" data-action="unarchive" data-id="${h.id}" aria-label="Restore">${ic('archive-restore')}</button><button class="mini-btn" data-action="delete" data-id="${h.id}" aria-label="Delete">${ic('trash-2')}</button>`
+      : `<button class="mini-btn" data-action="move" data-dir="-1" data-id="${h.id}" ${i === 0 ? 'disabled' : ''} aria-label="Move up">${ic('arrow-up')}</button>
+         <button class="mini-btn" data-action="move" data-dir="1" data-id="${h.id}" ${i === n - 1 ? 'disabled' : ''} aria-label="Move down">${ic('arrow-down')}</button>
+         <button class="mini-btn" data-action="edit" data-id="${h.id}" aria-label="Edit">${ic('pencil')}</button>`}</div>
   </div>`;
   let html = head;
-  if (list.length) html += list.map((h, i) => row(h, i, list.length)).join('');
-  else html += `<div class="card empty"><div class="art">🌱</div><h2>No habits yet</h2><p>Pick one from the ideas below or create your own.</p></div>`;
-  if (list.length >= 6) html += `<div class="warn">💡 You’re tracking ${list.length} habits. Research on behaviour change suggests fewer habits, done consistently, stick better. Consider archiving the ones that feel automatic.</div>`;
-  if (arch.length) html += `<section class="section"><div class="section-head"><h3>Archived</h3><span class="count">${arch.length}</span></div>${arch.map((h, i) => row(h, i, arch.length, true)).join('')}</section>`;
+  if (list.length) html += `<div class="list-card">${list.map((h, i) => row(h, i, list.length)).join('')}</div>`;
+  else html += `<div class="card empty"><div class="e-art">${ic('sprout')}</div><div class="t-title">No habits yet</div><p>Pick one from the ideas below, or create your own.</p></div>`;
+  if (list.length >= 6) html += `<div class="warn">${ic('info', 'sm')}<div>You’re tracking ${list.length} habits. Fewer habits, done consistently, tend to stick better — consider archiving the ones that already feel automatic.</div></div>`;
+  if (arch.length) html += `<section class="section"><div class="section-head"><h3>Archived</h3><span class="count">${arch.length}</span></div><div class="list-card">${arch.map((h, i) => row(h, i, arch.length, true)).join('')}</div></section>`;
   const names = new Set(S.habits.map(h => h.name.toLowerCase()));
   const ideas = TEMPLATES.map((t, i) => ({ t, i })).filter(x => !names.has(x.t.name.toLowerCase()));
-  if (ideas.length) html += `<section class="section"><div class="section-head"><h3>Ideas</h3><span class="count">tap to customise</span></div>
-    <div class="ideas">${ideas.map(x => `<button class="idea" data-action="template" data-i="${x.i}"><span class="e">${x.t.emoji}</span>${esc(x.t.name)}</button>`).join('')}</div></section>`;
+  if (ideas.length) html += `<section class="section"><div class="section-head"><h3>Ideas</h3><span class="count">Tap to customise</span></div>
+    <div class="ideas">${ideas.map(x => `<button class="idea" data-action="template" data-i="${x.i}">${tile(x.t, 'sm')}${esc(x.t.name)}</button>`).join('')}</div></section>`;
   return html;
 }
 
@@ -680,41 +715,42 @@ function viewHabits() {
 function viewSettings() {
   const s = S.settings;
   const seg = (name, val, opts) => `<div class="seg">${opts.map(([v, l]) => `<button class="${String(val) === String(v) ? 'on' : ''}" data-action="setting" data-k="${name}" data-v="${v}">${l}</button>`).join('')}</div>`;
+  const si = (icon, c) => `<span class="si" style="--c:${c}">${ic(icon)}</span>`;
   const installed = matchMedia('(display-mode: standalone)').matches;
-  return `<header class="top"><div><div class="eyebrow">Settings</div><h1>You</h1></div></header>
+  return `<header class="top"><div><div class="eyebrow">Settings</div><h1 class="t-display">You</h1></div></header>
   <div class="set-group"><h3>Profile</h3><div class="set-card">
-    <div class="set-row"><span class="si">👋</span><span class="st">Your name</span><input class="input" id="set-name" value="${esc(s.name)}" placeholder="Name" maxlength="24" autocomplete="given-name"></div>
+    <div class="set-row">${si('user-round', '#3FA2F2')}<span class="st">Name</span><input class="input" id="set-name" value="${esc(s.name)}" placeholder="Your name" maxlength="24" autocomplete="given-name"></div>
   </div></div>
   <div class="set-group"><h3>Preferences</h3><div class="set-card">
-    <div class="set-row"><span class="si">🎨</span><span class="st">Theme</span>${seg('theme', s.theme, [['system', 'Auto'], ['dark', 'Dark'], ['light', 'Light']])}</div>
-    <div class="set-row"><span class="si">📅</span><span class="st">Week starts</span>${seg('weekStart', s.weekStart, [[1, 'Mon'], [0, 'Sun']])}</div>
+    <div class="set-row">${si('palette', '#A26EF2')}<span class="st">Appearance</span>${seg('theme', s.theme, [['system', 'Auto'], ['dark', 'Dark'], ['light', 'Light']])}</div>
+    <div class="set-row">${si('calendar', '#34C38F')}<span class="st">Week starts on</span>${seg('weekStart', s.weekStart, [[1, 'Mon'], [0, 'Sun']])}</div>
   </div></div>
   ${NATIVE ? `<div class="set-group"><h3>Reminder</h3><div class="set-card">
-    <div class="set-row"><span class="si">🔔</span><span class="st">Daily nudge<small>Only if habits are still open that day.</small></span>${seg('reminder', s.reminder.on ? 'on' : 'off', [['off', 'Off'], ['on', 'On']])}</div>
-    ${s.reminder.on ? `<div class="set-row"><span class="si">⏰</span><span class="st">Time</span><input class="input" type="time" id="set-remind" value="${esc(s.reminder.time)}" style="max-width:160px;padding:0 12px"></div>` : ''}
-  </div><p class="hint" style="margin:8px 4px 0">Tip: set it for the evening — late enough to know what’s left, early enough to do the tiny version.</p></div>` : ''}
+    <div class="set-row">${si('bell', '#F28C38')}<span class="st">Daily nudge<small>Only when habits are still open.</small></span>${seg('reminder', s.reminder.on ? 'on' : 'off', [['off', 'Off'], ['on', 'On']])}</div>
+    ${s.reminder.on ? `<div class="set-row">${si('clock', '#F28C38')}<span class="st">Time</span><input class="input" type="time" id="set-remind" value="${esc(s.reminder.time)}" style="max-width:160px;padding:0 12px"></div>` : ''}
+  </div><p class="hint" style="margin:8px 4px 0">Evening works best — late enough to know what’s left, early enough to do the tiny version.</p></div>` : ''}
   ${NATIVE ? `<div class="set-group"><h3>Home screen widgets</h3><div class="set-card">
-    <button class="set-row" data-action="pin-widget" data-w="today"><span class="si">📋</span><span class="st">Today list<small>Tick habits off right from your home screen.</small></span><span class="btn sm">Add</span></button>
-    <button class="set-row" data-action="pin-widget" data-w="ring"><span class="si">⭕</span><span class="st">Progress ring<small>Today’s % and your best streak, at a glance.</small></span><span class="btn sm">Add</span></button>
-  </div><p class="hint" style="margin:8px 4px 0">Or long-press your home screen → Widgets → Ember. Widgets follow your theme.</p></div>` : ''}
+    <button class="set-row" data-action="pin-widget" data-w="today">${si('list-checks', '#6F7CF2')}<span class="st">Today list<small>Check off habits from your home screen.</small></span><span class="btn sm">Add</span></button>
+    <button class="set-row" data-action="pin-widget" data-w="ring">${si('layout-grid', '#6F7CF2')}<span class="st">Progress ring<small>Today’s progress and best streak.</small></span><span class="btn sm">Add</span></button>
+  </div><p class="hint" style="margin:8px 4px 0">Or long-press your home screen → Widgets → Ember.</p></div>` : ''}
   ${NATIVE ? '' : `<div class="set-group"><h3>App</h3><div class="set-card">
-    ${installed ? `<div class="set-row"><span class="si">✅</span><span class="st">Installed<small>Ember is running as an app on this device.</small></span></div>`
-      : `<button class="set-row" data-action="install"><span class="si">📲</span><span class="st">Install on home screen<small>${UI.installEvt ? 'Full-screen, offline, like a native app.' : 'In Chrome: ⋮ menu → “Add to Home screen” or “Install app”.'}</small></span></button>`}
+    ${installed ? `<div class="set-row">${si('circle-check', '#34C38F')}<span class="st">Installed<small>Ember is running as an app on this device.</small></span></div>`
+      : `<button class="set-row" data-action="install">${si('download', '#3FA2F2')}<span class="st">Install on home screen<small>${UI.installEvt ? 'Full-screen and offline, like a native app.' : 'In Chrome: ⋮ menu → Add to Home screen.'}</small></span>${ic('chevron-right', 'sm chev')}</button>`}
   </div></div>`}
-  <div class="set-group"><h3>Your data</h3><div class="set-card">
-    <button class="set-row" data-action="export"><span class="si">💾</span><span class="st">Export backup<small>Download all habits and history as a file.</small></span></button>
-    <button class="set-row" data-action="import"><span class="si">📂</span><span class="st">Import backup<small>Restore from an Ember backup file.</small></span></button>
-    <button class="set-row" data-action="reset"><span class="si">🗑️</span><span class="st" style="color:#FF6B6B">Erase everything<small>Deletes all habits and history on this device.</small></span></button>
-  </div><p class="hint" style="margin:8px 4px 0">Everything stays private on this phone. Export a backup now and then.</p></div>
-  <div class="set-group"><h3>The method behind Ember</h3><div class="science">
-    <div class="sci"><b>🪪 Identity first</b><p>Each habit carries an identity — “I am someone who…”. Outcomes fade; identity sticks. Every check-in is evidence.</p></div>
-    <div class="sci"><b>🤏 Two-minute version</b><p>Write the tiniest version of each habit. On bad days, do just that. Showing up keeps the identity alive.</p></div>
-    <div class="sci"><b>🔗 Habit stacking</b><p>Anchor new habits to existing ones: “After I pour my coffee, I will meditate.” A clear cue beats willpower.</p></div>
-    <div class="sci"><b>🛡️ Never miss twice</b><p>Ember warns you after a miss. One slip is normal; the second in a row is where habits break.</p></div>
-    <div class="sci"><b>🌙 Rest days</b><p>Mark planned rest as a skip. Your streak is protected and your stats stay honest.</p></div>
-    <div class="sci"><b>📈 Habit strength</b><p>A smoothed score that rises with consistency and dips gently with misses — so one bad day never erases months of progress. Habits often take around two months to feel automatic, so watch this number climb.</p></div>
+  <div class="set-group"><h3>Data</h3><div class="set-card">
+    <button class="set-row" data-action="export">${si('download', '#34C38F')}<span class="st">Export backup<small>Save all habits and history to a file.</small></span>${ic('chevron-right', 'sm chev')}</button>
+    <button class="set-row" data-action="import">${si('upload', '#3FA2F2')}<span class="st">Import backup<small>Restore from an Ember backup file.</small></span>${ic('chevron-right', 'sm chev')}</button>
+    <button class="set-row" data-action="reset">${si('trash-2', '#F2685B')}<span class="st" style="color:var(--bad)">Erase all data<small>Delete every habit and its history.</small></span></button>
+  </div><p class="hint" style="margin:8px 4px 0">Your data stays private on this device.</p></div>
+  <div class="set-group"><h3>The method</h3><div class="science">
+    <div class="sci">${ic('user-round')}<div><b>Identity first</b><p>Each habit carries an identity — “I am someone who…”. Outcomes fade; identity sticks. Every check-in is evidence.</p></div></div>
+    <div class="sci">${ic('feather')}<div><b>Two-minute version</b><p>Write the tiniest version of each habit. On bad days, do just that — showing up keeps the identity alive.</p></div></div>
+    <div class="sci">${ic('link')}<div><b>Habit stacking</b><p>Anchor new habits to existing ones: “After I pour my coffee, I will meditate.” A clear cue beats willpower.</p></div></div>
+    <div class="sci">${ic('shield')}<div><b>Never miss twice</b><p>Ember flags a miss the next day. One slip is normal; two in a row is where habits break.</p></div></div>
+    <div class="sci">${ic('moon')}<div><b>Rest days</b><p>Mark planned rest as a skip. Your streak is protected and your stats stay honest.</p></div></div>
+    <div class="sci">${ic('trending-up')}<div><b>Habit strength</b><p>A smoothed score that rises with consistency and dips gently on misses, so one bad day never erases months of work. Habits often take around two months to feel automatic.</p></div></div>
   </div></div>
-  <p class="foot">Ember ${VERSION} · Made for showing up 🔥</p>`;
+  <p class="foot">Ember ${VERSION}</p>`;
 }
 
 /* ---------- Onboarding ---------- */
@@ -722,19 +758,19 @@ function viewOnboarding() {
   if (!UI.onbPicks) UI.onbPicks = new Set();
   const n = UI.onbPicks.size;
   const picks = TEMPLATES.map((t, i) => `<button class="pick ${UI.onbPicks.has(i) ? 'on' : ''}" style="--c:${t.color}" data-action="onb-pick" data-i="${i}">
-    <span class="e">${t.emoji}</span><span class="n">${esc(t.name)}</span><span class="t">Tiny: ${esc(t.tiny)}</span></button>`).join('');
+    ${tile(t, 'sm')}<span class="ck">${ic('check')}</span><span class="n">${esc(t.name)}</span><span class="t">${esc(t.tiny)}</span></button>`).join('');
   return `<div class="onb">
     <div class="logo"><svg viewBox="0 0 24 24"><path d="M12 2c1.3 4.3 6.5 6.8 6.5 12.7A6.4 6.4 0 0 1 12 21a6.4 6.4 0 0 1-6.5-6.3c0-2.6 1.1-4.3 2.4-5.7.3 2.1 1.4 3.4 2.8 3.9C10 9.6 10.7 5.5 12 2Z"/></svg></div>
-    <h1>Small habits,<br><span class="grad-text">kept alive daily.</span></h1>
-    <p class="lead">Ember helps you become the person you want to be — one tiny, repeatable action at a time.</p>
+    <h1>Small habits,<br><span class="accent">kept alive daily.</span></h1>
+    <p class="lead">Become the person you want to be — one small, repeatable action at a time.</p>
     <div class="field"><label for="onb-name">What should we call you?</label>
-      <input class="input" id="onb-name" placeholder="Your first name" maxlength="24" autocomplete="given-name" value="${esc(S.settings.name)}"></div>
-    <div class="field"><label>Pick where to start</label>
-      <p class="help" style="margin:-2px 2px 12px">Start with 1–3. Fewer habits, done every day, beat many done sometimes. You can customise everything later.</p>
+      <input class="input" id="onb-name" placeholder="First name" maxlength="24" autocomplete="given-name" value="${esc(S.settings.name)}"></div>
+    <div class="field"><label>Choose where to start</label>
+      <p class="help" style="margin:-2px 2px 12px">We recommend one to three. Fewer habits, done every day, beat many done sometimes.</p>
       <div class="picks">${picks}</div>
-      ${n > 4 ? `<div class="warn">That’s ${n} habits. Ambitious! Consider starting with 3 and adding more once they feel easy.</div>` : ''}
+      ${n > 4 ? `<div class="warn">${ic('info', 'sm')}<div>That’s ${n} habits — ambitious. Consider starting with three and adding more once they feel easy.</div></div>` : ''}
     </div>
-    <div class="onb-foot"><button class="btn primary block" data-action="onb-start">${n ? `Start with ${n} habit${n > 1 ? 's' : ''}` : 'Start with a blank slate'}</button></div>
+    <div class="onb-foot"><button class="btn primary block" data-action="onb-start">${n ? `Continue with ${n} habit${n > 1 ? 's' : ''}` : 'Start with a blank slate'}</button></div>
   </div>`;
 }
 
@@ -796,16 +832,16 @@ function bindSheetDrag(sheet) {
 function habitSheet(h) {
   const k = UI.date, t = today();
   const st = streak(h), best = bestStreak(h), r = rate(h, 30), s = strength(h);
-  const unit = isWeekly(h) ? 'wk' : 'd';
+  const unit = isWeekly(h) ? 'wk' : (st === 1 ? 'day' : 'days');
   const why = [];
-  if (h.identity) why.push(`<div class="why-row"><span class="wi">🪪</span><div><small>Identity</small>I am someone who ${esc(h.identity)}.</div></div>`);
-  if (h.stack) why.push(`<div class="why-row"><span class="wi">🔗</span><div><small>Cue</small>After I ${esc(h.stack)}, I will ${esc(h.name.toLowerCase())}.</div></div>`);
-  if (h.tiny) why.push(`<div class="why-row"><span class="wi">🤏</span><div><small>Bad day? Just do</small>${esc(h.tiny)}</div></div>`);
+  if (h.identity) why.push(`<div class="li">${ic('user-round', 'sm')}<div><small>Identity</small>I am someone who ${esc(h.identity)}.</div></div>`);
+  if (h.stack) why.push(`<div class="li">${ic('link', 'sm')}<div><small>Cue</small>After I ${esc(h.stack)}, I will ${esc(h.name.toLowerCase())}.</div></div>`);
+  if (h.tiny) why.push(`<div class="li">${ic('feather', 'sm')}<div><small>Two-minute version</small>${esc(h.tiny)}</div></div>`);
   const c = countOf(h, k), skip = isSkip(h, k), done = isDone(h, k);
-  const dayLbl = k === t ? 'Today' : fmtDate(k);
+  const dayLbl = k === t ? 'today' : fmtDate(k);
   const ctl = h.target > 1
-    ? `<div class="stepper"><button data-action="dec" data-id="${h.id}" aria-label="Minus">−</button><span class="sv">${c}<small>/${h.target} ${esc(h.unit)}</small></span><button data-action="inc" data-id="${h.id}" aria-label="Plus">+</button></div>`
-    : `<button class="btn ${done ? '' : 'primary'}" style="flex:1" data-action="check" data-id="${h.id}">${done ? 'Undo' : `Done ${dayLbl === 'Today' ? 'today' : `· ${dayLbl}`}`}</button>`;
+    ? `<div class="stepper"><button data-action="dec" data-id="${h.id}" aria-label="Decrease">${ic('chevron-left', 'sm')}</button><span class="sv">${c}<small> / ${h.target}${h.unit ? ' ' + esc(h.unit) : ''}</small></span><button data-action="inc" data-id="${h.id}" aria-label="Increase">${ic('plus', 'sm')}</button></div>`
+    : `<button class="btn ${done ? '' : 'primary'}" style="flex:1" data-action="check" data-id="${h.id}">${done ? `${ic('check', 'sm')}Completed ${dayLbl}` : `Mark done ${k === t ? 'today' : `· ${dayLbl}`}`}</button>`;
   const cell = k2 => {
     let cls = 'hm-c', style = '';
     const v = countOf(h, k2);
@@ -819,25 +855,25 @@ function habitSheet(h) {
     return `<i class="${cls}" style="${style}" data-action="cell" data-id="${h.id}" data-k="${k2}" title="${k2}"></i>`;
   };
   return `<div style="--c:${h.color}">
-    <div class="d-head"><div class="h-icon">${h.emoji}</div><div style="flex:1;min-width:0"><h2>${esc(h.name)}</h2><p>${freqText(h)} · ${TIMES.find(x => x.id === h.time).label}${h.target > 1 ? ` · ${h.target} ${esc(h.unit)}` : ''}</p></div>
-      <button class="icon-btn" data-action="close-sheet" aria-label="Close"><svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
-    ${why.length ? `<div class="why">${why.join('')}</div>` : ''}
+    <div class="d-head">${tile(h, 'lg')}<div class="dh-body"><h2>${esc(h.name)}</h2><p>${freqText(h)} · ${TIMES.find(x => x.id === h.time).label}${h.target > 1 ? ` · ${h.target} ${esc(h.unit)}` : ''}</p></div>
+      <button class="icon-btn" data-action="close-sheet" aria-label="Close">${ic('x', 'sm')}</button></div>
+    ${why.length ? `<div class="list-card">${why.join('')}</div>` : ''}
     <div class="today-ctl">${ctl}
-      <button class="btn ${skip ? 'primary' : ''}" data-action="skip" data-id="${h.id}" ${k > t ? 'disabled' : ''}>🌙 ${skip ? 'Resting' : 'Rest day'}</button></div>
+      <button class="btn" data-action="skip" data-id="${h.id}" ${k > t ? 'disabled' : ''} style="${skip ? 'color:var(--accent);border-color:var(--accent)' : ''}">${ic('moon', 'sm')}${skip ? 'Resting' : 'Rest day'}</button></div>
     <div class="stats">
-      <div class="stat"><div class="v">🔥 ${st}<small>${unit}</small></div><div class="l">Current streak</div></div>
-      <div class="stat"><div class="v">${best}<small>${unit}</small></div><div class="l">Best streak</div></div>
+      <div class="stat"><div class="v">${st}<small>${unit}</small></div><div class="l">Current streak</div></div>
+      <div class="stat"><div class="v">${best}<small>${isWeekly(h) ? 'wk' : 'days'}</small></div><div class="l">Best streak</div></div>
       <div class="stat"><div class="v">${pctTxt(r)}</div><div class="l">Last 30 days</div></div>
       <div class="stat"><div class="v">${totalDone(h)}</div><div class="l">Total check-ins</div></div>
-      <div class="stat wide">${ring(s, 64, 7, h.color, 'str-' + h.id)}<div class="info"><div class="v" style="font-size:20px">${Math.round(s * 100)}% · ${strengthLabel(s)}</div>
-        <p>Habit strength rises with every check-in and dips gently on misses. Around two months of consistency usually makes it feel automatic.</p></div></div>
+      <div class="stat wide">${ring(s, 60, 6, h.color, 'str-' + h.id)}<div class="info"><div class="v">${Math.round(s * 100)}%<span class="badge">${strengthLabel(s)}</span></div>
+        <p>Habit strength rises with every check-in and dips gently on misses. Around two months of consistency usually makes it automatic.</p></div></div>
     </div>
-    <section class="section"><div class="section-head"><h3>History</h3><span class="count">tap a day to toggle</span></div>
+    <section class="section"><div class="section-head"><h3>History</h3><span class="count">Tap a day to edit</span></div>
       <div class="card" style="padding:14px">${heatmap(cell, 18)}</div></section>
     <div class="btn-row" style="margin-top:20px">
-      <button class="btn" data-action="edit" data-id="${h.id}">${I.edit} Edit</button>
-      <button class="btn" data-action="archive" data-id="${h.id}">${I.archive} Archive</button>
-      <button class="btn danger" data-action="delete" data-id="${h.id}" aria-label="Delete" style="flex:0 0 52px;padding:0">${I.trash}</button>
+      <button class="btn" data-action="edit" data-id="${h.id}">${ic('pencil', 'sm')}Edit</button>
+      <button class="btn" data-action="archive" data-id="${h.id}">${ic('archive', 'sm')}Archive</button>
+      <button class="btn danger" data-action="delete" data-id="${h.id}" aria-label="Delete" style="flex:0 0 50px;padding:0">${ic('trash-2', 'sm')}</button>
     </div>
   </div>`;
 }
@@ -847,7 +883,7 @@ function openHabit(id) { const h = byId(id); if (h) openSheet(habitSheet(h), 'ha
 let D = null; // draft
 function draftFrom(src) {
   return {
-    id: src.id || null, name: src.name || '', emoji: src.emoji || '⭐', color: src.color || COLORS[1],
+    id: src.id || null, name: src.name || '', icon: src.icon || (EMOJI_ICON[src.emoji] || 'star'), emoji: src.emoji || '⭐', color: src.color || COLORS[1],
     target: src.target || 1, unit: src.unit || '', time: src.time || 'anytime',
     freq: { type: src.freq?.type || 'daily', days: src.freq?.days ? [...src.freq.days] : [1, 2, 3, 4, 5], times: src.freq?.times || 3 },
     identity: src.identity || '', stack: src.stack || '', tiny: src.tiny || '',
@@ -866,33 +902,33 @@ function rerenderEditor() {
 }
 function editorHtml() {
   const f = D.freq;
-  const tpl = D.isNew ? `<div class="field" style="margin-top:4px"><label>Quick start</label><div class="chips scroll">${TEMPLATES.map((t, i) => `<button class="chip" data-action="e-tpl" data-i="${i}">${t.emoji} ${esc(t.name)}</button>`).join('')}</div></div>` : '';
-  return `<div class="sheet-title"><h2>${D.isNew ? 'New habit' : 'Edit habit'}</h2><button class="icon-btn" data-action="close-sheet" aria-label="Close"><svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  const tpl = D.isNew ? `<div class="field" style="margin-top:0"><label>Start from an idea</label><div class="chips scroll">${TEMPLATES.map((t, i) => `<button class="chip" data-action="e-tpl" data-i="${i}" style="--c:${t.color}"><span style="color:${t.color};display:flex">${ic(t.icon, 'sm')}</span>${esc(t.name)}</button>`).join('')}</div></div>` : '';
+  return `<div class="sheet-title"><h2 class="t-title">${D.isNew ? 'New habit' : 'Edit habit'}</h2><button class="icon-btn" data-action="close-sheet" aria-label="Close">${ic('x', 'sm')}</button></div>
     ${tpl}
-    <div class="preview" style="--c:${D.color}"><div class="h-icon">${D.emoji}</div><div style="min-width:0"><div class="pv-n" id="pv-n">${esc(D.name) || 'Your new habit'}</div><div class="pv-s">${freqText(D)} · ${TIMES.find(t => t.id === D.time).label}</div></div></div>
+    <div class="preview" style="margin-top:${D.isNew ? 20 : 0}px">${tile(D)}<div style="min-width:0"><div class="pv-n" id="pv-n">${esc(D.name) || 'Untitled habit'}</div><div class="pv-s">${freqText(D)} · ${TIMES.find(t => t.id === D.time).label}</div></div></div>
     <div class="field"><label for="e-name">Name</label><input class="input" id="e-name" data-f="name" value="${esc(D.name)}" placeholder="e.g. Read 10 pages" maxlength="40" autocomplete="off"></div>
-    <div class="field"><label>Icon</label><div class="emojis">${EMOJIS.map(e => `<button class="${e === D.emoji ? 'on' : ''}" data-action="e-emoji" data-v="${e}">${e}</button>`).join('')}</div></div>
+    <div class="field"><label>Icon</label><div class="icons-grid" style="--c:${D.color}">${HABIT_ICONS.map(n => `<button class="${n === D.icon ? 'on' : ''}" data-action="e-icon" data-v="${n}" aria-label="${n}">${ic(n)}</button>`).join('')}</div></div>
     <div class="field"><label>Colour</label><div class="colors">${COLORS.map(c => `<button class="${c === D.color ? 'on' : ''}" style="--sw:${c}" data-action="e-color" data-v="${c}" aria-label="Colour ${c}"></button>`).join('')}</div></div>
     <div class="field"><label>Goal</label>
-      <div class="seg"><button class="${D.target <= 1 ? 'on' : ''}" data-action="e-goal" data-v="check">Just do it</button><button class="${D.target > 1 ? 'on' : ''}" data-action="e-goal" data-v="count">Reach a number</button></div>
-      ${D.target > 1 ? `<div style="display:flex;gap:10px;margin-top:10px;align-items:center">
-        <div class="stepper"><button data-action="e-target" data-d="-1">−</button><span class="sv">${D.target}</span><button data-action="e-target" data-d="1">+</button></div>
-        <input class="input" data-f="unit" value="${esc(D.unit)}" placeholder="unit (glasses, pages…)" maxlength="16" style="flex:1"></div>` : ''}
+      <div class="seg"><button class="${D.target <= 1 ? 'on' : ''}" data-action="e-goal" data-v="check">Complete once</button><button class="${D.target > 1 ? 'on' : ''}" data-action="e-goal" data-v="count">Reach a number</button></div>
+      ${D.target > 1 ? `<div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+        <div class="stepper"><button data-action="e-target" data-d="-1" aria-label="Decrease">${ic('chevron-left', 'sm')}</button><span class="sv">${D.target}</span><button data-action="e-target" data-d="1" aria-label="Increase">${ic('plus', 'sm')}</button></div>
+        <input class="input" data-f="unit" value="${esc(D.unit)}" placeholder="Unit — glasses, pages…" maxlength="16" style="flex:1"></div>` : ''}
     </div>
-    <div class="field"><label>How often</label>
-      <div class="seg">${[['daily', 'Every day'], ['days', 'Some days'], ['weekly', 'X per week']].map(([v, l]) => `<button class="${f.type === v ? 'on' : ''}" data-action="e-freq" data-v="${v}">${l}</button>`).join('')}</div>
+    <div class="field"><label>Frequency</label>
+      <div class="seg">${[['daily', 'Daily'], ['days', 'Specific days'], ['weekly', 'Weekly goal']].map(([v, l]) => `<button class="${f.type === v ? 'on' : ''}" data-action="e-freq" data-v="${v}">${l}</button>`).join('')}</div>
       ${f.type === 'days' ? `<div class="chips" style="margin-top:10px;justify-content:space-between">${[1, 2, 3, 4, 5, 6, 0].map(d => `<button class="chip round ${f.days.includes(d) ? 'on' : ''}" data-action="e-day" data-v="${d}">${DOW[d].slice(0, 2)}</button>`).join('')}</div>` : ''}
-      ${f.type === 'weekly' ? `<div style="display:flex;gap:12px;margin-top:10px;align-items:center"><div class="stepper"><button data-action="e-times" data-d="-1">−</button><span class="sv">${f.times}×</span><button data-action="e-times" data-d="1">+</button></div><span class="muted" style="font-size:13px">any days you like, per week</span></div>` : ''}
+      ${f.type === 'weekly' ? `<div style="display:flex;gap:12px;margin-top:10px;align-items:center"><div class="stepper"><button data-action="e-times" data-d="-1" aria-label="Decrease">${ic('chevron-left', 'sm')}</button><span class="sv">${f.times}×</span><button data-action="e-times" data-d="1" aria-label="Increase">${ic('plus', 'sm')}</button></div><span class="t-cap">per week, any days</span></div>` : ''}
     </div>
-    <div class="field"><label>Time of day</label><div class="chips">${TIMES.map(t => `<button class="chip ${D.time === t.id ? 'on' : ''}" data-action="e-time" data-v="${t.id}">${t.icon} ${t.label}</button>`).join('')}</div></div>
-    <div class="stick-card"><span class="flabel">✨ Make it stick</span>
-      <p class="help" style="margin:0 2px">Optional — but these three answers are what separate habits that last from ones that fade.</p>
-      <div class="field"><label>Identity</label><div class="prefix" style="--pl:168px"><span>I am someone who</span><input class="input" data-f="identity" value="${esc(D.identity)}" placeholder="reads every day" maxlength="60"></div>
+    <div class="field"><label>Time of day</label><div class="chips">${TIMES.map(t => `<button class="chip ${D.time === t.id ? 'on' : ''}" data-action="e-time" data-v="${t.id}">${ic(t.icon)}${t.label}</button>`).join('')}</div></div>
+    <div class="stick-card"><div class="sc-head">${ic('wand-sparkles', 'sm')}Make it stick</div>
+      <p class="help" style="margin:4px 0 0">Optional, but these three answers are what separate habits that last from ones that fade.</p>
+      <div class="field"><label>Identity</label><div class="prefix" style="--pl:160px"><span>I am someone who</span><input class="input" data-f="identity" value="${esc(D.identity)}" placeholder="reads every day" maxlength="60"></div>
         <p class="help">Who does this habit prove you are?</p></div>
-      <div class="field"><label>Cue · habit stack</label><div class="prefix" style="--pl:66px"><span>After I</span><input class="input" data-f="stack" value="${esc(D.stack)}" placeholder="pour my morning coffee" maxlength="60"></div>
+      <div class="field"><label>Cue</label><div class="prefix" style="--pl:64px"><span>After I</span><input class="input" data-f="stack" value="${esc(D.stack)}" placeholder="pour my morning coffee" maxlength="60"></div>
         <p class="help">Anchor it to something you already do every day.</p></div>
       <div class="field"><label>Two-minute version</label><input class="input" data-f="tiny" value="${esc(D.tiny)}" placeholder="Read one page" maxlength="60">
-        <p class="help">The tiniest version you can do on your worst day.</p></div>
+        <p class="help">The smallest version you can do on your worst day.</p></div>
     </div>
     <div class="edit-foot"><button class="btn primary block" data-action="e-save">${D.isNew ? 'Create habit' : 'Save changes'}</button></div>`;
 }
@@ -905,14 +941,14 @@ function saveDraft() {
   if (D.isNew) { h = addHabit({ ...D, freq }); }
   else {
     h = byId(D.id); if (!h) return;
-    Object.assign(h, { name, emoji: D.emoji, color: D.color, target: Math.max(1, D.target), unit: D.unit.trim(), time: D.time, freq, identity: D.identity.trim(), stack: D.stack.trim(), tiny: D.tiny.trim() });
+    Object.assign(h, { name, icon: D.icon, color: D.color, target: Math.max(1, D.target), unit: D.unit.trim(), time: D.time, freq, identity: D.identity.trim(), stack: D.stack.trim(), tiny: D.tiny.trim() });
   }
   save();
   const wasNew = D.isNew; D = null;
   if (wasNew) {
     closeSheet(); UI.tab = 'today'; UI.date = today(); render();
-    toast(`${h.emoji} ${h.name} added. Start tiny.`);
-  } else { render(); openHabit(h.id); toast('Saved'); }
+    toast(`${h.name} added — start tiny`);
+  } else { render(); openHabit(h.id); toast('Changes saved'); }
 }
 
 /* ================= Theme ================= */
@@ -921,7 +957,7 @@ function applyTheme() {
   const dark = pref === 'system' ? matchMedia('(prefers-color-scheme: dark)').matches : pref !== 'light';
   document.documentElement.dataset.theme = dark ? 'dark' : 'light';
   const m = document.querySelector('meta[name="theme-color"]');
-  if (m) m.content = dark ? '#0A0B10' : '#F6F3EE';
+  if (m) m.content = dark ? '#0C0C0E' : '#F6F6F3';
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => { if (S.settings.theme === 'system') applyTheme(); });
 
@@ -931,8 +967,8 @@ function confetti(color) {
   const cv = document.getElementById('confetti'), ctx = cv.getContext('2d');
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; ctx.scale(dpr, dpr);
-  const palette = color ? [color, '#FFB547', '#FFFFFF', '#FF7A45'] : ['#FF5E62', '#FF7A45', '#FFB547', '#FFE08A', '#FFFFFF', '#B26BFF', '#4DA8FF'];
-  const parts = Array.from({ length: 140 }, () => ({
+  const palette = color ? [color, '#FFA45C', '#F4F4F5', '#FF7A3D'] : ['#FF7A3D', '#FFA45C', '#F4F4F5', '#E9B23F', '#6F7CF2', '#34C38F'];
+  const parts = Array.from({ length: 110 }, () => ({
     x: innerWidth / 2 + (Math.random() - .5) * 60, y: innerHeight * .35,
     vx: (Math.random() - .5) * 14, vy: -Math.random() * 15 - 4,
     w: 5 + Math.random() * 6, h: 8 + Math.random() * 8, r: Math.random() * 6, vr: (Math.random() - .5) * .4,
@@ -971,7 +1007,7 @@ document.getElementById('import-file').addEventListener('change', async e => {
     if (!confirm(`Replace current data with this backup (${data.habits.length} habits)?`)) return;
     const d = defaultState();
     S = Object.assign(d, { habits: data.habits, logs: data.logs || {}, settings: Object.assign(d.settings, data.settings || {}), onboarded: true });
-    save(); render(); toast('Backup restored ✨');
+    save(); render(); toast('Backup restored');
   } catch (err) { toast('That file isn’t an Ember backup'); }
 });
 
@@ -1043,11 +1079,11 @@ const actions = {
     [...UI.onbPicks].sort((a, b) => a - b).forEach(i => addHabit(TEMPLATES[i]));
     S.onboarded = true; UI.onbPicks = null; UI.tab = 'today'; save(); render();
     window.scrollTo(0, 0);
-    if (S.habits.length) toast('Your first embers are lit 🔥'); else openEditor(null, true);
+    if (S.habits.length) toast('You’re all set — start small'); else openEditor(null, true);
   },
   // editor
   'e-tpl': el => { const keep = D.isNew; D = draftFrom(TEMPLATES[+el.dataset.i]); D.isNew = keep; rerenderEditor(); },
-  'e-emoji': el => { D.emoji = el.dataset.v; rerenderEditor(); },
+  'e-icon': el => { D.icon = el.dataset.v; rerenderEditor(); },
   'e-color': el => { D.color = el.dataset.v; rerenderEditor(); },
   'e-goal': el => { D.target = el.dataset.v === 'count' ? Math.max(2, D.target > 1 ? D.target : 8) : 1; rerenderEditor(); },
   'e-target': el => { D.target = Math.max(2, Math.min(999, D.target + +el.dataset.d)); rerenderEditor(); },
@@ -1072,7 +1108,7 @@ document.addEventListener('input', e => {
   const f = e.target.dataset.f;
   if (f && D) {
     D[f] = e.target.value;
-    if (f === 'name') { const pv = document.getElementById('pv-n'); if (pv) pv.textContent = e.target.value || 'Your new habit'; }
+    if (f === 'name') { const pv = document.getElementById('pv-n'); if (pv) pv.textContent = e.target.value || 'Untitled habit'; }
   }
 });
 document.addEventListener('change', e => {
@@ -1090,7 +1126,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) chec
 setInterval(checkRollover, 60 * 1000);
 
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); UI.installEvt = e; if (S.onboarded) render(); });
-window.addEventListener('appinstalled', () => { UI.installEvt = null; toast('Ember installed 🔥'); });
+window.addEventListener('appinstalled', () => { UI.installEvt = null; toast('Ember installed'); });
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => { }));
 }

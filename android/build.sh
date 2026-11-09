@@ -15,7 +15,7 @@ B=build
 rm -rf "$B" && mkdir -p "$B/gen" "$B/classes" "$B/assets/www"
 
 # 1. Web app → assets (no service worker / manifest needed inside the APK)
-cp -r ../ember/index.html ../ember/app.css ../ember/app.js ../ember/fonts ../ember/icons "$B/assets/www/"
+cp -r ../ember/index.html ../ember/app.css ../ember/app.js ../ember/icons.js ../ember/fonts ../ember/icons "$B/assets/www/"
 
 # 2. Resources → R.java
 aapt package -f -m -J "$B/gen" -M AndroidManifest.xml -S res -I "$ANDROID_JAR"

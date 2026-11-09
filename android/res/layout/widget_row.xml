@@ -6,7 +6,7 @@
     android:minHeight="54dp"
     android:orientation="horizontal"
     android:gravity="center_vertical"
-    android:padding="9dp"
+    android:padding="10dp"
     android:background="@drawable/row_bg_dark">
 
     <FrameLayout android:layout_width="36dp" android:layout_height="36dp">
@@ -14,15 +14,17 @@
             android:src="@drawable/tile" />
         <TextView android:id="@+id/emoji" android:layout_width="match_parent" android:layout_height="match_parent"
             android:gravity="center" android:textSize="18sp" />
+        <ImageView android:id="@+id/icon" android:layout_width="match_parent" android:layout_height="match_parent"
+            android:padding="8dp" android:visibility="gone" />
     </FrameLayout>
 
     <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
         android:orientation="vertical" android:paddingLeft="11dp" android:paddingRight="8dp">
         <TextView android:id="@+id/name" android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:textSize="14sp" android:textStyle="bold" android:singleLine="true" android:ellipsize="end"
-            android:fontFamily="sans-serif-medium" android:textColor="#FFF3F4F8" />
+            android:fontFamily="sans-serif-medium" android:textColor="#FFEDEDEF" />
         <TextView android:id="@+id/meta" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:textSize="11.5sp" android:singleLine="true" android:ellipsize="end" android:textColor="#FF959BB0" />
+            android:textSize="11.5sp" android:singleLine="true" android:ellipsize="end" android:textColor="#FFA1A1AA" />
     </LinearLayout>
 
     <FrameLayout android:layout_width="34dp" android:layout_height="34dp">
@@ -31,7 +33,7 @@
         <ImageView android:id="@+id/check" android:layout_width="match_parent" android:layout_height="match_parent"
             android:padding="7dp" android:src="@drawable/ic_check" android:visibility="gone" />
         <TextView android:id="@+id/cnt" android:layout_width="match_parent" android:layout_height="match_parent"
-            android:gravity="center" android:textSize="11sp" android:textStyle="bold" android:textColor="#FFF3F4F8"
+            android:gravity="center" android:textSize="11sp" android:textStyle="bold" android:textColor="#FFEDEDEF"
             android:visibility="gone" />
     </FrameLayout>
 </LinearLayout>

@@ -43,7 +43,7 @@ public class TodayWidget extends AppWidgetProvider {
         boolean light = Widgets.light(d);
         RemoteViews rv = new RemoteViews(ctx.getPackageName(), R.layout.widget_today);
         rv.setInt(R.id.root, "setBackgroundResource", Widgets.bg(light));
-        Widgets.setTextColors(rv, light, new int[]{R.id.title, R.id.pct}, new int[]{R.id.sub, R.id.empty});
+        Widgets.setTextColors(rv, light, new int[]{R.id.title, R.id.pct, R.id.streak}, new int[]{R.id.sub, R.id.empty});
 
         int[] p = d == null ? new int[]{0, 0, 0, 0} : WidgetData.progress(d);
         int due = p[0], ok = p[1], best = p[2], count = p[3];
@@ -51,20 +51,21 @@ public class TodayWidget extends AppWidgetProvider {
         rv.setTextViewText(R.id.pct, Widgets.pct(due, ok));
 
         String day = new SimpleDateFormat("EEE, d MMM", Locale.getDefault()).format(new Date());
-        rv.setTextViewText(R.id.title, "Today · " + day);
+        rv.setTextViewText(R.id.title, day);
         String sub;
         if (d == null || count == 0) sub = "Open Ember to add a habit";
         else if (due == 0) sub = "Nothing scheduled — rest day";
-        else if (ok == due) sub = "Perfect day · every promise kept";
-        else sub = ok + " of " + due + " done · " + (due - ok) + " to go";
+        else if (ok == due) sub = "Every habit complete";
+        else sub = ok + " of " + due + " complete · " + (due - ok) + " to go";
         rv.setTextViewText(R.id.sub, sub);
-        rv.setTextViewText(R.id.streak, best > 0 ? "🔥 " + best : "");
+        rv.setTextViewText(R.id.streak, best > 0 ? String.valueOf(best) : "");
+        rv.setTextViewCompoundDrawables(R.id.streak, best > 0 ? R.drawable.ic_flame : 0, 0, 0, 0);
 
         rv.setRemoteAdapter(R.id.list, Widgets.serviceIntent(ctx, widgetId));
         rv.setEmptyView(R.id.list, R.id.empty);
         rv.setTextViewText(R.id.empty, d == null || count == 0
-                ? "Tap to open Ember and light your first habit 🔥"
-                : "Nothing scheduled today 🌙\nRest is part of the plan.");
+                ? "Open Ember to add your first habit"
+                : "Nothing scheduled today.\nRest is part of the plan.");
         rv.setPendingIntentTemplate(R.id.list, Widgets.tapTemplate(ctx));
         rv.setOnClickPendingIntent(R.id.header, Widgets.openApp(ctx));
         rv.setOnClickPendingIntent(R.id.empty, Widgets.openApp(ctx));

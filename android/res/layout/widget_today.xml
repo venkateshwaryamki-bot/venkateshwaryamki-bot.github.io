@@ -20,26 +20,26 @@
         <FrameLayout android:layout_width="46dp" android:layout_height="46dp">
             <ImageView android:id="@+id/ring" android:layout_width="match_parent" android:layout_height="match_parent" />
             <TextView android:id="@+id/pct" android:layout_width="match_parent" android:layout_height="match_parent"
-                android:gravity="center" android:textSize="11sp" android:textStyle="bold" android:textColor="#FFF3F4F8" />
+                android:gravity="center" android:textSize="11sp" android:textStyle="bold" android:textColor="#FFEDEDEF" />
         </FrameLayout>
 
         <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
             android:orientation="vertical" android:paddingLeft="12dp" android:paddingRight="8dp">
             <TextView android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"
                 android:textSize="16sp" android:textStyle="bold" android:singleLine="true" android:ellipsize="end"
-                android:fontFamily="sans-serif-medium" android:textColor="#FFF3F4F8" android:text="Today" />
+                android:fontFamily="sans-serif-medium" android:textColor="#FFEDEDEF" android:text="Today" />
             <TextView android:id="@+id/sub" android:layout_width="wrap_content" android:layout_height="wrap_content"
-                android:textSize="12sp" android:singleLine="true" android:ellipsize="end" android:textColor="#FF959BB0" />
+                android:textSize="12sp" android:singleLine="true" android:ellipsize="end" android:textColor="#FFA1A1AA" />
         </LinearLayout>
 
         <TextView android:id="@+id/streak" android:layout_width="wrap_content" android:layout_height="wrap_content"
-            android:textSize="14sp" android:textStyle="bold" android:textColor="#FFFFB547" />
+            android:textSize="14sp" android:textStyle="bold" android:textColor="#FFEDEDEF" android:drawablePadding="4dp" android:gravity="center_vertical" />
     </LinearLayout>
 
     <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
         <ListView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="match_parent"
             android:divider="@null" android:dividerHeight="6dp" android:scrollbars="none" />
         <TextView android:id="@+id/empty" android:layout_width="match_parent" android:layout_height="match_parent"
-            android:gravity="center" android:padding="12dp" android:textSize="14sp" android:textColor="#FF959BB0" />
+            android:gravity="center" android:padding="12dp" android:textSize="14sp" android:textColor="#FFA1A1AA" />
     </FrameLayout>
 </LinearLayout>
