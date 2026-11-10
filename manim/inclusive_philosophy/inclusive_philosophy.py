@@ -6,10 +6,10 @@ A Manim Community Edition animation of the lecture note
 University of Hyderabad, 21 January 2025), Figure 1 and Table 1.
 
 Render one scene (1080p, 30 fps):
-    manim -pqh inclusive_philosophy.py Scene1_Intro
+    manim -pqh --fps 30 inclusive_philosophy.py Scene1_Intro
 
 Render every scene in order:
-    manim -qh inclusive_philosophy.py Scene1_Intro Scene2_Story Scene3_Graph \
+    manim -qh --fps 30 inclusive_philosophy.py Scene1_Intro Scene2_Story Scene3_Graph \
         Scene4_PathsAB Scene5_PathsCD Scene6_PathE Scene7_Triangle Scene8_Recap
 
 Join the scenes into one video (run from this folder after rendering):

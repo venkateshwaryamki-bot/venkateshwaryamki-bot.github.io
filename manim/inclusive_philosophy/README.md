@@ -10,8 +10,8 @@ Needs Manim Community v0.18 or newer, LaTeX (for `MathTex`) and ffmpeg.
 
 ```bash
 pip install manim
-manim -pqh inclusive_philosophy.py Scene1_Intro          # one scene
-manim -qh  inclusive_philosophy.py -a                     # all scenes
+manim -pqh --fps 30 inclusive_philosophy.py Scene1_Intro        # one scene
+manim -qh --fps 30 inclusive_philosophy.py -a           # all scenes
 
 cd media/videos/inclusive_philosophy/1080p30
 printf "file '%s.mp4'\n" Scene1_Intro Scene2_Story Scene3_Graph Scene4_PathsAB \
