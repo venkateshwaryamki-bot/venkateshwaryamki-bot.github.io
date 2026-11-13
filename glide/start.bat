@@ -21,28 +21,7 @@ if not exist "glide.py" (
   goto :fail
 )
 
-rem --- 2. Find a real Python 3.9+ (skips the Microsoft Store placeholder) -----------------
-call :findpy
-rem Look for a real python.exe on disk first, so Windows' "app execution alias" stubs and the
-rem Python install manager's first-run questions can never stall this script.
-set "PY="
-for /d %%D in ("%LOCALAPPDATA%\Programs\Python\Python3*" "%LOCALAPPDATA%\Python\pythoncore-3*" "%ProgramFiles%\Python3*") do (
-  if not defined PY if exist "%%~D\python.exe" "%%~D\python.exe" -c "import sys; sys.exit(sys.version_info < (3, 9))" <nul >nul 2>&1 && set PY="%%~D\python.exe"
-)
-if defined PY exit /b 0
-rem Then the launchers. Input comes from NUL, so any prompt gets its default answer instead of waiting.
-py -3 -c "import sys; sys.exit(sys.version_info < (3, 9))" <nul >nul 2>&1 && set "PY=py -3" && exit /b 0
-python -c "import sys; sys.exit(sys.version_info < (3, 9))" <nul >nul 2>&1 && set "PY=python" && exit /b 0
-exit /b 0
-
-:fail
-)
-if not exist "glide.py" (
-  echo   [X] glide.py is missing. Make sure start.bat is inside the "glide" folder.
-  goto :fail
-)
-
-rem --- 2. Find a real Python 3.9+ (skips the Microsoft Store placeholder) -----------------
+rem --- 2. Find a real Python 3.9+ -------------------------------------------------------
 call :findpy
 if not defined PY (
   echo   Python is not installed yet. Installing it now - this takes a minute or two...
@@ -56,7 +35,7 @@ if not defined PY (
     start "" "https://www.python.org/downloads/windows/"
     goto :fail
   )
-  winget install -e --id Python.Python.3.12 --scope user --silent --accept-package-agreements --accept-source-agreements
+  winget install -e --id Python.Python.3.12 --scope user --silent --accept-package-agreements --accept-source-agreements <nul
   call :findpy
 )
 if not defined PY (
@@ -77,7 +56,7 @@ if not exist ".venv\Scripts\python.exe" (
   echo   Using your main Python instead of a private environment.
   set "RUN=!PY!"
 )
-!RUN! -m pip install -q --disable-pip-version-check -r requirements.txt
+!RUN! -m pip install -q --disable-pip-version-check -r requirements.txt <nul
 if errorlevel 1 (
   echo.
   echo   [X] Couldn't download Glide's libraries. Check the laptop is online, then try again.
@@ -91,12 +70,16 @@ if errorlevel 1 goto :fail
 exit /b 0
 
 :findpy
+rem Look for a real python.exe on disk first, so Windows' "app execution alias" stubs and the
+rem Python install manager's first-run questions can never stall this script.
 set "PY="
-py -3 -c "import sys; sys.exit(sys.version_info < (3, 9))" >nul 2>&1 && set "PY=py -3" && exit /b 0
-python -c "import sys; sys.exit(sys.version_info < (3, 9))" >nul 2>&1 && set "PY=python" && exit /b 0
-for /d %%D in ("%LOCALAPPDATA%\Programs\Python\Python3*") do (
-  if exist "%%~D\python.exe" "%%~D\python.exe" -c "import sys; sys.exit(sys.version_info < (3, 9))" >nul 2>&1 && set PY="%%~D\python.exe"
+for /d %%D in ("%LOCALAPPDATA%\Programs\Python\Python3*" "%LOCALAPPDATA%\Python\pythoncore-3*" "%ProgramFiles%\Python3*") do (
+  if not defined PY if exist "%%~D\python.exe" "%%~D\python.exe" -c "import sys; sys.exit(sys.version_info < (3, 9))" <nul >nul 2>&1 && set PY="%%~D\python.exe"
 )
+if defined PY exit /b 0
+rem Then the launchers. Input comes from NUL, so any prompt takes its default answer instead of waiting.
+py -3 -c "import sys; sys.exit(sys.version_info < (3, 9))" <nul >nul 2>&1 && set "PY=py -3" && exit /b 0
+python -c "import sys; sys.exit(sys.version_info < (3, 9))" <nul >nul 2>&1 && set "PY=python" && exit /b 0
 exit /b 0
 
 :fail
