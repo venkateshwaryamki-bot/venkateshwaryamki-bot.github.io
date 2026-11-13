@@ -123,9 +123,11 @@
       <label class="toggle"><span>Haptic feedback</span><input type="checkbox" id="tHaptics" /><i></i></label>
       <label class="toggle"><span>Touch glow</span><input type="checkbox" id="tGlow" /><i></i></label>
       <label class="toggle"><span>Left-handed layout</span><input type="checkbox" id="tLefty" /><i></i></label>
+      <label class="toggle native-only"><span>Volume keys click<small>Down = left · Up = right</small></span><input type="checkbox" id="tVolume" /><i></i></label>
     </div>
     <div class="row-btns">
       <button id="btnFullscreen" class="ghost">Full screen</button>
+      <button id="btnComputers" class="ghost native-only">Computers</button>
       <button id="btnReset" class="ghost">Reset defaults</button>
     </div>
     <p class="about" id="about">Glide</p>
@@ -133,14 +135,41 @@
 
   <div class="scrim" id="scrim"></div>
 
-  <!-- Shown when the page was opened without a pairing key -->
+  <!-- Pairing: browser mode explains how to pair; the Android app lists computers -->
   <div class="pairing" id="pairing" hidden>
     <div class="pairing-card">
       <svg class="logo big" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5v15.2l4-4 2.9 6.2 2.6-1.2-2.8-6h5.6z" fill="url(#lg)"/></svg>
       <h1>Pair with your computer</h1>
-      <p>Run <code>glide.py</code> on your computer, then scan the QR code it shows. This page needs the pairing link to connect.</p>
+      <p class="web-only">Run <code>glide.py</code> on your computer, then scan the QR code it shows. This page needs the pairing link to connect.</p>
+      <p class="native-only">Start Glide on your computer, then pick it below or scan the QR code it shows.</p>
+      <div class="native-only pc-block">
+        <div class="pc-head">
+          <span>Computers on this Wi-Fi</span>
+          <button id="btnRescan" class="rescan" aria-label="Search again"><svg viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v4.5h-4.5"/></svg></button>
+        </div>
+        <ul class="pcs" id="pcList"></ul>
+        <button class="primary" id="btnScan">
+          <svg viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16M4 12h16"/></svg>
+          Scan QR code
+        </button>
+        <form class="link-form" id="linkForm" autocomplete="off">
+          <input id="linkInput" type="url" inputmode="url" placeholder="…or paste the pairing link" spellcheck="false" />
+          <button type="submit" aria-label="Connect">→</button>
+        </form>
+        <button class="ghost" id="btnPairClose" hidden>Back to trackpad</button>
+      </div>
     </div>
   </div>
+
+  <!-- QR scanner (Android app) -->
+  <div class="scanner" id="scanner" hidden>
+    <video id="scanVideo" playsinline muted></video>
+    <div class="scan-frame"><i></i></div>
+    <p>Point at the QR code on your computer</p>
+    <button class="ghost" id="btnScanClose">Cancel</button>
+  </div>
+
+  <div class="toast" id="toast" role="status"></div>
 
   <script src="app.js"></script>
 </body>

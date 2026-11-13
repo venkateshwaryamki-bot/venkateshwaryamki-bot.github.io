@@ -15,21 +15,42 @@
   /* ------------------------------------------------------------------ settings */
   const DEFAULTS = {
     speed: 1.6, accel: 0.9, scroll: 1.2,
-    natural: true, inertia: true, tap: true, haptics: true, glow: true, lefty: false,
+    natural: true, inertia: true, tap: true, haptics: true, glow: true, lefty: false, volkeys: false,
   };
   const cfg = Object.assign({}, DEFAULTS, store.get("glide.cfg", {}));
   const saveCfg = () => store.set("glide.cfg", cfg);
 
-  /* ------------------------------------------------------------------ pairing key */
-  const params = new URLSearchParams(location.search);
-  let token = params.get("k");
-  if (token) store.set("glide.k", token);
-  else token = store.get("glide.k", null);
+  /* ------------------------------------------------------------------ pairing */
+  // Browser mode: the page is served by the computer and the key is in the URL.
+  // Android app: the page is bundled; paired computers are remembered here and
+  // re-found on the network (UDP discovery) if their IP address changes.
+  const NATIVE = !!window.GlideNative;
+  document.body.classList.toggle("native", NATIVE);
+
+  let pcs = NATIVE ? store.get("glide.pcs", []) : [];   // [{token, host, port, id, name, os}]
+  let curToken = NATIVE ? store.get("glide.cur", null) : null;
+  let found = [];                                        // last discovery results
+  const savePcs = () => { store.set("glide.pcs", pcs); store.set("glide.cur", curToken); };
+  const currentPc = () => pcs.find((p) => p.token === curToken) || null;
+
+  let webToken = null;
+  if (!NATIVE) {
+    const params = new URLSearchParams(location.search);
+    webToken = params.get("k");
+    if (webToken) store.set("glide.k", webToken);
+    else webToken = store.get("glide.k", null);
+  }
+
+  function target() {
+    if (!NATIVE) return webToken ? { url: `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`, token: webToken } : null;
+    const pc = currentPc();
+    return pc ? { url: `ws://${pc.host}:${pc.port}/ws`, token: pc.token } : null;
+  }
 
   /* ------------------------------------------------------------------ connection */
   const statusEl = $("status"), statusText = $("statusText");
   let ws = null, online = false, retry = 0, hostName = "", hostOS = "";
-  let pingTimer = 0, pingSent = 0, rtt = 0, failures = 0;
+  let pingTimer = 0, pingSent = 0, rtt = 0, failures = 0, reTimer = 0;
 
   function setStatus(state, text) {
     statusEl.dataset.state = state;
@@ -38,41 +59,208 @@
   }
 
   function connect() {
-    if (!token) { $("pairing").hidden = false; setStatus("offline", "Not paired"); return; }
+    clearTimeout(reTimer);
+    const t = target();
+    if (!t) { showPairing(); setStatus("offline", "Not paired"); return; }
     setStatus("connecting", retry ? "Reconnecting…" : "Connecting…");
-    const proto = location.protocol === "https:" ? "wss" : "ws";
-    try { ws = new WebSocket(`${proto}://${location.host}/ws?k=${encodeURIComponent(token)}`); }
+    let sock;
+    try { sock = new WebSocket(`${t.url}?k=${encodeURIComponent(t.token)}`); }
     catch { scheduleReconnect(); return; }
+    ws = sock;
 
-    ws.onopen = () => {
+    sock.onopen = () => {
+      if (sock !== ws) return;
       online = true; retry = 0; failures = 0;
       setStatus("online", "Connected");
       ping(); clearInterval(pingTimer); pingTimer = setInterval(ping, 2000);
+      if (NATIVE) hidePairing();
     };
-    ws.onmessage = (e) => {
+    sock.onmessage = (e) => {
+      if (sock !== ws) return;
       let m; try { m = JSON.parse(e.data); } catch { return; }
       if (m.t === "hello") {
         hostName = m.host || "Computer"; hostOS = m.os || "";
         $("about").textContent = `Connected to ${hostName} · ${hostOS} · Glide ${m.v}`;
+        const pc = currentPc();
+        if (pc) { pc.id = m.id || pc.id; pc.name = hostName; pc.os = hostOS; savePcs(); }
         renderStatus();
       } else if (m.t === "pong") {
         rtt = Math.round(performance.now() - pingSent);
         renderStatus();
       }
     };
-    ws.onclose = () => {
+    sock.onclose = () => {
+      if (sock !== ws) return;
       const wasOnline = online;
       online = false; clearInterval(pingTimer);
       if (!wasOnline) failures++;
       scheduleReconnect();
     };
-    ws.onerror = () => { try { ws.close(); } catch {} };
+    sock.onerror = () => { try { sock.close(); } catch {} };
+  }
+
+  function reconnectNow() {
+    const old = ws; ws = null;
+    if (old) { try { old.close(); } catch {} }
+    online = false; clearInterval(pingTimer);
+    retry = 0; failures = 0; rtt = 0; hostName = "";
+    connect();
   }
 
   function scheduleReconnect() {
+    // The computer may have a new IP: look for it on the network.
+    if (NATIVE && failures >= 2 && failures % 2 === 0) discover();
     const wait = Math.min(4000, 400 * 2 ** retry++);
     setStatus(failures >= 4 ? "offline" : "connecting", failures >= 4 ? "Can't reach computer" : "Reconnecting…");
-    setTimeout(connect, wait);
+    reTimer = setTimeout(connect, wait);
+  }
+
+  /* ------------------------------------------------------------------ discovery (app) */
+  let discovering = false;
+  function discover() {
+    if (!NATIVE || discovering) return;
+    discovering = true; $("btnRescan").classList.add("spin");
+    try { window.GlideNative.discover(); } catch { discovering = false; }
+  }
+  window.glideDiscovered = (list) => {
+    discovering = false; $("btnRescan").classList.remove("spin");
+    found = Array.isArray(list) ? list.filter((d) => d && d.id && d.host) : [];
+    let moved = false;
+    for (const d of found) {
+      const pc = pcs.find((p) => p.id === d.id);
+      if (pc && (pc.host !== d.host || pc.port !== d.port)) { pc.host = d.host; pc.port = d.port; moved = pc.token === curToken; }
+      if (pc) pc.name = d.name || pc.name;
+    }
+    savePcs(); renderPcs();
+    if (moved && !online) { toast("Found your computer at its new address"); reconnectNow(); }
+  };
+
+  /* ------------------------------------------------------------------ pairing screen */
+  const pairing = $("pairing"), pcList = $("pcList");
+  const PC_ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8 20h8M12 16.5V20"/></svg>';
+
+  function showPairing() {
+    pairing.hidden = false;
+    $("btnPairClose").hidden = !(online && currentPc());
+    renderPcs(); discover();
+  }
+  function hidePairing() { pairing.hidden = true; }
+
+  function renderPcs() {
+    if (!NATIVE) return;
+    const rows = [];
+    const seen = new Set();
+    for (const d of found) {
+      const pc = pcs.find((p) => p.id === d.id);
+      seen.add(d.id);
+      rows.push({ name: d.name, sub: `${d.os || "Computer"} · ${d.host}`, pc, disc: d });
+    }
+    for (const pc of pcs) if (!pc.id || !seen.has(pc.id)) rows.push({ name: pc.name || pc.host, sub: `Saved · ${pc.host}`, pc, away: true });
+    pcList.innerHTML = "";
+    if (!rows.length) {
+      pcList.innerHTML = `<li class="empty">${discovering ? "Looking for computers…" : "No computers found. Make sure Glide is running."}</li>`;
+      return;
+    }
+    for (const r of rows) {
+      const li = document.createElement("li");
+      if (r.pc && r.pc.token === curToken) li.className = "current";
+      const tag = r.pc ? (r.away ? '<span class="tag away">Saved</span>' : '<span class="tag paired">Paired</span>') : '<span class="tag new">New</span>';
+      li.innerHTML = `<span class="pc-ic">${PC_ICON}</span><span class="pc-txt"><div class="pc-name">${escapeHtml(r.name || "Computer")}</div><div class="pc-sub">${escapeHtml(r.sub)}</div></span>${tag}${r.pc ? '<button class="forget" aria-label="Forget">×</button>' : ""}`;
+      li.addEventListener("click", (e) => {
+        if (e.target.closest(".forget")) {
+          pcs = pcs.filter((p) => p !== r.pc);
+          if (curToken === r.pc.token) { curToken = null; reconnectNow(); }
+          savePcs(); renderPcs(); return;
+        }
+        buzz(6);
+        if (r.pc) { curToken = r.pc.token; savePcs(); renderPcs(); reconnectNow(); }
+        else { toast(`Scan the QR code shown on ${r.name || "your computer"} to pair`); openScanner(); }
+      });
+      pcList.appendChild(li);
+    }
+  }
+
+  function pairFromLink(text) {
+    let u;
+    try { u = new URL(String(text).trim()); } catch { u = null; }
+    const k = u && u.searchParams.get("k");
+    if (!u || !k || !/^https?:$/.test(u.protocol)) { toast("That isn't a Glide pairing code"); buzz([10, 60, 10]); return false; }
+    const port = +u.port || 80;
+    let pc = pcs.find((p) => p.token === k);
+    if (pc) { pc.host = u.hostname; pc.port = port; }
+    else { pc = { token: k, host: u.hostname, port, id: null, name: u.hostname }; pcs.push(pc); }
+    curToken = k; savePcs(); buzz(16);
+    toast("Paired — connecting…");
+    reconnectNow();
+    return true;
+  }
+
+  if (NATIVE) {
+    statusEl.addEventListener("click", showPairing);
+    $("btnComputers").addEventListener("click", () => { closeSheets(); showPairing(); });
+    $("btnRescan").addEventListener("click", () => { buzz(5); discover(); renderPcs(); });
+    $("btnPairClose").addEventListener("click", hidePairing);
+    $("btnScan").addEventListener("click", openScanner);
+    $("linkForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      if (pairFromLink($("linkInput").value)) { $("linkInput").value = ""; $("linkInput").blur(); }
+    });
+  }
+
+  /* ------------------------------------------------------------------ QR scanner (app) */
+  const scanner = $("scanner"), video = $("scanVideo");
+  const scanCanvas = document.createElement("canvas");
+  const scanCtx = scanCanvas.getContext("2d", { willReadFrequently: true });
+  let stream = null, scanRaf = 0;
+
+  function loadJsQR() {
+    if (window.jsQR) return Promise.resolve();
+    return new Promise((ok, fail) => {
+      const sc = document.createElement("script"); sc.src = "jsQR.js"; sc.onload = ok; sc.onerror = fail;
+      document.head.appendChild(sc);
+    });
+  }
+
+  async function openScanner() {
+    scanner.hidden = false;
+    try {
+      await loadJsQR();
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } }, audio: false });
+    } catch {
+      closeScanner(); toast("Camera unavailable — paste the pairing link instead"); return;
+    }
+    if (scanner.hidden) { closeScanner(); return; }
+    video.srcObject = stream;
+    try { await video.play(); } catch {}
+    scanLoop();
+  }
+
+  function scanLoop() {
+    if (!stream) return;
+    if (video.readyState >= 2 && video.videoWidth) {
+      const w = 560, h = Math.round((video.videoHeight * w) / video.videoWidth);
+      if (scanCanvas.width !== w) { scanCanvas.width = w; scanCanvas.height = h; }
+      scanCtx.drawImage(video, 0, 0, w, h);
+      const img = scanCtx.getImageData(0, 0, w, h);
+      const code = window.jsQR(img.data, w, h, { inversionAttempts: "attemptBoth" });
+      if (code && code.data) { closeScanner(); pairFromLink(code.data); return; }
+    }
+    scanRaf = requestAnimationFrame(scanLoop);
+  }
+
+  function closeScanner() {
+    cancelAnimationFrame(scanRaf);
+    if (stream) { for (const tr of stream.getTracks()) tr.stop(); stream = null; }
+    video.srcObject = null;
+    scanner.hidden = true;
+  }
+  $("btnScanClose").addEventListener("click", closeScanner);
+
+  /* ------------------------------------------------------------------ toast */
+  let toastTimer = 0;
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600);
   }
 
   function ping() { if (online) { pingSent = performance.now(); send(["p", 1]); } }
@@ -103,10 +291,17 @@
     if (psx || psy) { send(["s", +psx.toFixed(2), +psy.toFixed(2)]); psx = psy = 0; }
   }
 
-  const buzz = (ms) => { if (cfg.haptics && navigator.vibrate) navigator.vibrate(ms); };
+  function buzz(ms) {
+    if (!cfg.haptics) return;
+    if (NATIVE) {
+      const pattern = Array.isArray(ms) ? ms : [ms];
+      let at = 0;
+      pattern.forEach((d, i) => { if (i % 2 === 0) setTimeout(() => window.GlideNative.haptic(d), at); at += d; });
+    } else if (navigator.vibrate) navigator.vibrate(ms);
+  }
 
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && (!ws || ws.readyState > 1)) { retry = 0; connect(); }
+    if (document.visibilityState === "visible" && target() && (!ws || ws.readyState > 1)) { retry = 0; connect(); }
   });
 
   /* ------------------------------------------------------------------ pointer curve */
@@ -492,7 +687,7 @@
                    ["sAccel", "oAccel", "accel", (v) => (v ? `${Math.round(v * 50)}%` : "Off")],
                    ["sScroll", "oScroll", "scroll", (v) => `${v.toFixed(1)}×`]];
   const toggles = [["tNatural", "natural"], ["tInertia", "inertia"], ["tTap", "tap"],
-                   ["tHaptics", "haptics"], ["tGlow", "glow"], ["tLefty", "lefty"]];
+                   ["tHaptics", "haptics"], ["tGlow", "glow"], ["tLefty", "lefty"], ["tVolume", "volkeys"]];
 
   function paintSlider(el) {
     const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
@@ -514,6 +709,7 @@
     $(tid).addEventListener("change", (e) => {
       cfg[key] = e.target.checked; saveCfg();
       if (key === "lefty") document.body.classList.toggle("lefty", cfg.lefty);
+      if (key === "volkeys" && NATIVE) window.GlideNative.setVolumeKeys(cfg.volkeys);
       buzz(5);
     });
   }
@@ -521,7 +717,7 @@
 
   const fsBtn = $("btnFullscreen");
   const root = document.documentElement;
-  if (!root.requestFullscreen && !root.webkitRequestFullscreen) fsBtn.hidden = true;
+  if (NATIVE || (!root.requestFullscreen && !root.webkitRequestFullscreen)) fsBtn.hidden = true;
   fsBtn.addEventListener("click", () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else (root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: "hide" });
@@ -544,6 +740,19 @@
   // Safety: if the page is hidden mid-drag, release everything.
   window.addEventListener("pagehide", () => { if (dragging) endDrag(); });
 
+  /* ------------------------------------------------------------------ Android hooks */
+  // Hardware volume keys as mouse buttons (when enabled in settings).
+  window.glideHardware = (btn, down) => { send([down ? "d" : "u", btn]); if (down) buzz(8); };
+  // System back button: close the top-most layer; return true if handled.
+  window.glideBack = () => {
+    if (!scanner.hidden) { closeScanner(); return true; }
+    if (openSheet) { closeSheets(); return true; }
+    if (!pairing.hidden && currentPc() && online) { hidePairing(); return true; }
+    return false;
+  };
+  window.glideResume = () => { if (target() && (!ws || ws.readyState > 1)) { retry = 0; connect(); } };
+
   loadUI();
+  if (NATIVE) { try { window.GlideNative.setVolumeKeys(!!cfg.volkeys); } catch {} }
   connect();
 })();

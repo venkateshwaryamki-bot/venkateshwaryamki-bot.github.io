@@ -31,7 +31,8 @@ import webbrowser
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
+DISCOVER_MSG = b"GLIDE_DISCOVER"
 HERE = Path(__file__).resolve().parent
 STATIC = HERE / "static"
 CONFIG_DIR = Path.home() / ".glide"
@@ -301,6 +302,13 @@ class GlideServer:
         self.input = InputBackend()
         self.clients: set[WebSocket] = set()
         self.pair_url = f"http://{host_ip}:{port}/?k={token}"
+        # Public id derived from the key: lets paired phones recognise this computer
+        # on the network (e.g. after its IP changes) without revealing the key.
+        self.server_id = hashlib.sha256(token.encode()).hexdigest()[:16]
+
+    def beacon(self) -> bytes:
+        return json.dumps({"glide": 1, "id": self.server_id, "name": socket.gethostname(),
+                           "port": self.port, "os": SYSTEM, "v": VERSION}).encode()
 
     # -- HTTP -----------------------------------------------------------------
     async def handle(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
@@ -396,7 +404,7 @@ class GlideServer:
         self.clients.add(ws)
         device = headers.get("user-agent", "")
         log(f"{c('Connected', '38;5;114')}  {peer[0]}  {c(short_device(device), '2')}", "ok")
-        await ws.send(json.dumps({"t": "hello", "host": socket.gethostname(),
+        await ws.send(json.dumps({"t": "hello", "host": socket.gethostname(), "id": self.server_id,
                                   "os": SYSTEM, "v": VERSION}))
         try:
             while True:
@@ -457,6 +465,21 @@ class GlideServer:
         return (tpl.replace("{{QR}}", svg)
                    .replace("{{URL}}", self.pair_url)
                    .replace("{{HOST}}", socket.gethostname()))
+
+
+class Discovery(asyncio.DatagramProtocol):
+    """Answers LAN broadcast probes from the Glide Android app."""
+
+    def __init__(self, server: GlideServer):
+        self.server = server
+        self.transport = None
+
+    def connection_made(self, transport):
+        self.transport = transport
+
+    def datagram_received(self, data, addr):
+        if data.strip() == DISCOVER_MSG:
+            self.transport.sendto(self.server.beacon(), addr)
 
 
 def short_device(ua: str) -> str:
@@ -532,6 +555,11 @@ async def main_async(args) -> None:
     except OSError as exc:
         log(f"Port {args.port} is busy ({exc.strerror}). Try:  python glide.py --port 8766", "err")
         return
+    try:
+        loop = asyncio.get_running_loop()
+        await loop.create_datagram_endpoint(lambda: Discovery(server), local_addr=("0.0.0.0", args.port))
+    except OSError:
+        log("Auto-discovery unavailable (UDP port busy) — pairing by QR still works", "warn")
     banner(server)
     if not args.no_browser:
         try:

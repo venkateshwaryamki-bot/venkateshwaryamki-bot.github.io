@@ -15,6 +15,22 @@ small server, and the phone opens the trackpad in its browser over your Wi-Fi.
    Scan it with your phone's camera. The phone and laptop must be on the **same Wi-Fi**.
 4. Optional: in the phone's browser, choose **Add to Home Screen** to get a full-screen app icon.
 
+## Android app (recommended on Android)
+
+`Glide.apk` is a native Android app with the same trackpad, plus a few extras:
+
+- **Auto-discovery:** computers running Glide on your Wi-Fi show up in a list. If your
+  laptop's IP address changes, the app finds it again and reconnects on its own.
+- **QR pairing in the app:** tap *Scan QR code*, or paste the pairing link.
+- **Remembers several computers.** Tap the status pill to switch between them.
+- **Crisp haptics** from the phone's haptic engine, and the **screen stays awake** while you use it.
+- **Volume keys as mouse buttons** (optional, in Settings): Volume Down is left click, Volume Up is right click. Hold a key to drag.
+- True full screen, with no browser bars.
+
+To install, download `Glide.apk` to the phone, open it, and allow "Install unknown apps"
+when Android asks. The first pairing needs the QR code. After that, just open the app.
+To rebuild it, run `android/build.sh` (see the comments at the top of that file).
+
 ## Gestures
 
 | Gesture | Action |

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="glide_bg">#FF08080D</color>
+    <color name="glide_icon_bg">#FF100E1C</color>
+    <style name="GlideTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/glide_bg</item>
+        <item name="android:colorBackground">@color/glide_bg</item>
+        <item name="android:statusBarColor">@color/glide_bg</item>
+        <item name="android:navigationBarColor">@color/glide_bg</item>
+        <item name="android:colorAccent">#FFB8A6FF</item>
+        <item name="android:colorPrimary">#FF08080D</item>
+        <item name="android:colorPrimaryDark">#FF08080D</item>
+    </style>
+</resources>
