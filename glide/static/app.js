@@ -1,0 +1,549 @@
+/* Glide — phone trackpad client.
+ * Turns touch gestures into compact messages sent over a WebSocket:
+ *   ["m",dx,dy] move · ["s",dx,dy] scroll · ["c",btn] click · ["d"/"u",btn] press/release
+ *   ["z",n] zoom · ["t",text] type · ["k",key] key · ["x",combo] shortcut · ["p",id] ping
+ */
+(() => {
+  "use strict";
+
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : JSON.parse(v); } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} },
+  };
+
+  /* ------------------------------------------------------------------ settings */
+  const DEFAULTS = {
+    speed: 1.6, accel: 0.9, scroll: 1.2,
+    natural: true, inertia: true, tap: true, haptics: true, glow: true, lefty: false,
+  };
+  const cfg = Object.assign({}, DEFAULTS, store.get("glide.cfg", {}));
+  const saveCfg = () => store.set("glide.cfg", cfg);
+
+  /* ------------------------------------------------------------------ pairing key */
+  const params = new URLSearchParams(location.search);
+  let token = params.get("k");
+  if (token) store.set("glide.k", token);
+  else token = store.get("glide.k", null);
+
+  /* ------------------------------------------------------------------ connection */
+  const statusEl = $("status"), statusText = $("statusText");
+  let ws = null, online = false, retry = 0, hostName = "", hostOS = "";
+  let pingTimer = 0, pingSent = 0, rtt = 0, failures = 0;
+
+  function setStatus(state, text) {
+    statusEl.dataset.state = state;
+    statusText.innerHTML = text;
+    document.body.classList.toggle("online", state === "online");
+  }
+
+  function connect() {
+    if (!token) { $("pairing").hidden = false; setStatus("offline", "Not paired"); return; }
+    setStatus("connecting", retry ? "Reconnecting…" : "Connecting…");
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    try { ws = new WebSocket(`${proto}://${location.host}/ws?k=${encodeURIComponent(token)}`); }
+    catch { scheduleReconnect(); return; }
+
+    ws.onopen = () => {
+      online = true; retry = 0; failures = 0;
+      setStatus("online", "Connected");
+      ping(); clearInterval(pingTimer); pingTimer = setInterval(ping, 2000);
+    };
+    ws.onmessage = (e) => {
+      let m; try { m = JSON.parse(e.data); } catch { return; }
+      if (m.t === "hello") {
+        hostName = m.host || "Computer"; hostOS = m.os || "";
+        $("about").textContent = `Connected to ${hostName} · ${hostOS} · Glide ${m.v}`;
+        renderStatus();
+      } else if (m.t === "pong") {
+        rtt = Math.round(performance.now() - pingSent);
+        renderStatus();
+      }
+    };
+    ws.onclose = () => {
+      const wasOnline = online;
+      online = false; clearInterval(pingTimer);
+      if (!wasOnline) failures++;
+      scheduleReconnect();
+    };
+    ws.onerror = () => { try { ws.close(); } catch {} };
+  }
+
+  function scheduleReconnect() {
+    const wait = Math.min(4000, 400 * 2 ** retry++);
+    setStatus(failures >= 4 ? "offline" : "connecting", failures >= 4 ? "Can't reach computer" : "Reconnecting…");
+    setTimeout(connect, wait);
+  }
+
+  function ping() { if (online) { pingSent = performance.now(); send(["p", 1]); } }
+
+  function renderStatus() {
+    if (!online) return;
+    const name = hostName ? escapeHtml(hostName) : "Connected";
+    setStatus("online", `${name}${rtt ? ` <span class="ms">· ${rtt} ms</span>` : ""}`);
+  }
+
+  function escapeHtml(s) { return s.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`); }
+
+  function send(msg) {
+    if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
+  }
+
+  // Motion is coalesced: if the socket is backed up, deltas merge instead of queueing.
+  let pmx = 0, pmy = 0, psx = 0, psy = 0, flushQueued = false;
+  function queueMove(dx, dy) { pmx += dx; pmy += dy; flush(); }
+  function queueScroll(dx, dy) { psx += dx; psy += dy; flush(); }
+  function flush() {
+    if (!ws || ws.readyState !== 1) { pmx = pmy = psx = psy = 0; return; }
+    if (ws.bufferedAmount > 2048) {
+      if (!flushQueued) { flushQueued = true; requestAnimationFrame(() => { flushQueued = false; flush(); }); }
+      return;
+    }
+    if (pmx || pmy) { send(["m", +pmx.toFixed(2), +pmy.toFixed(2)]); pmx = pmy = 0; }
+    if (psx || psy) { send(["s", +psx.toFixed(2), +psy.toFixed(2)]); psx = psy = 0; }
+  }
+
+  const buzz = (ms) => { if (cfg.haptics && navigator.vibrate) navigator.vibrate(ms); };
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && (!ws || ws.readyState > 1)) { retry = 0; connect(); }
+  });
+
+  /* ------------------------------------------------------------------ pointer curve */
+  // Speed-dependent gain: slow movements stay precise, fast flicks cross the screen.
+  function gain(px, dt) {
+    const v = px / Math.max(dt, 4);                        // px per ms
+    const boost = Math.min(Math.max(v - 0.12, 0) * 1.5, 3.2);
+    return cfg.speed * (1 + cfg.accel * boost);
+  }
+
+  /* ------------------------------------------------------------------ touch glow */
+  const pad = $("pad"), canvas = $("fx"), ctx = canvas.getContext("2d");
+  const hint = $("hint");
+  let dpr = 1, cw = 0, ch = 0;
+  const trails = new Map();    // pointerId -> [{x,y,t}]
+  const ripples = [];          // {x,y,t,color}
+  let fxRunning = false;
+
+  function resize() {
+    const r = pad.getBoundingClientRect();
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    cw = r.width; ch = r.height;
+    canvas.width = Math.round(cw * dpr); canvas.height = Math.round(ch * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  new ResizeObserver(resize).observe(pad);
+
+  function startFx() { if (!fxRunning && cfg.glow) { fxRunning = true; requestAnimationFrame(drawFx); } }
+
+  function drawFx(now) {
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.globalCompositeOperation = "lighter";
+    let alive = false;
+
+    for (const [id, pts] of trails) {
+      while (pts.length && now - pts[0].t > 260) pts.shift();
+      const live = pointers.has(id);
+      if (!pts.length) { if (!live) trails.delete(id); continue; }
+      alive = true;
+      // fading trail
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i], k = 1 - (now - b.t) / 260;
+        ctx.strokeStyle = `rgba(150,170,255,${0.5 * k})`;
+        ctx.lineWidth = 2 + 10 * k; ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+      if (live) {
+        const p = pts[pts.length - 1];
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 70);
+        g.addColorStop(0, dragging ? "rgba(95,224,242,0.55)" : "rgba(184,166,255,0.5)");
+        g.addColorStop(0.35, dragging ? "rgba(95,224,242,0.14)" : "rgba(120,150,255,0.14)");
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 70, 0, 7); ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.beginPath(); ctx.arc(p.x, p.y, 3.5, 0, 7); ctx.fill();
+      }
+    }
+
+    for (let i = ripples.length - 1; i >= 0; i--) {
+      const r = ripples[i], k = (now - r.t) / 480;
+      if (k >= 1) { ripples.splice(i, 1); continue; }
+      alive = true;
+      const e = 1 - (1 - k) ** 3;
+      ctx.strokeStyle = `rgba(${r.color},${0.75 * (1 - k)})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(r.x, r.y, 12 + 46 * e, 0, 7); ctx.stroke();
+    }
+
+    if (alive || pointers.size) requestAnimationFrame(drawFx);
+    else { fxRunning = false; ctx.clearRect(0, 0, cw, ch); }
+  }
+
+  function ripple(x, y, color = "184,166,255") {
+    if (!cfg.glow) return;
+    ripples.push({ x, y, t: performance.now(), color }); startFx();
+  }
+
+  /* ------------------------------------------------------------------ gesture engine */
+  const pointers = new Map();  // id -> {x, y, t}
+  let g = null;                // current gesture state
+  let dragging = false, holdTimer = 0, inertiaRaf = 0;
+
+  const TAP_MS = 240, TAP_SLOP = 9, HOLD_MS = 420;
+
+  function local(e) {
+    const r = pad.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+
+  function centroid() {
+    let x = 0, y = 0;
+    for (const p of pointers.values()) { x += p.x; y += p.y; }
+    const n = pointers.size || 1;
+    return { x: x / n, y: y / n };
+  }
+
+  function spread() {
+    const ps = [...pointers.values()];
+    if (ps.length < 2) return 0;
+    return Math.hypot(ps[0].x - ps[1].x, ps[0].y - ps[1].y);
+  }
+
+  function resetMulti(keepSamples = false) {
+    const c = centroid();
+    g.cx = c.x; g.cy = c.y; g.spread0 = g.spread = spread();
+    if (!keepSamples) { g.travel = 0; g.samples = []; }
+  }
+
+  pad.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    try { pad.setPointerCapture(e.pointerId); } catch {}
+    const p = local(e);
+    pointers.set(e.pointerId, { x: p.x, y: p.y, t: e.timeStamp });
+    trails.set(e.pointerId, [{ x: p.x, y: p.y, t: performance.now() }]);
+    stopInertia();
+    pad.classList.add("active");
+    hint.classList.add("gone");
+    startFx();
+
+    if (pointers.size === 1) {
+      g = { t0: e.timeStamp, max: 1, moved: 0, mode: "move", zoomAcc: 0, swiped: false };
+      resetMulti();
+      clearTimeout(holdTimer);
+      if (!dragging) holdTimer = setTimeout(startDrag, HOLD_MS);
+    } else if (g) {
+      clearTimeout(holdTimer);
+      g.max = Math.max(g.max, pointers.size);
+      if (!dragging) g.mode = pointers.size === 2 ? "two" : "three";
+      resetMulti();
+    }
+  });
+
+  pad.addEventListener("pointermove", (e) => {
+    const prev = pointers.get(e.pointerId);
+    if (!prev || !g) return;
+    const p = local(e);
+    const dx = p.x - prev.x, dy = p.y - prev.y, dt = e.timeStamp - prev.t;
+    prev.x = p.x; prev.y = p.y; prev.t = e.timeStamp;
+    const tr = trails.get(e.pointerId); if (tr) tr.push({ x: p.x, y: p.y, t: performance.now() });
+    g.moved += Math.hypot(dx, dy);
+    if (g.moved > TAP_SLOP) clearTimeout(holdTimer);
+
+    if (g.mode === "move" || dragging) {
+      if (pointers.size === 1 || dragging) {
+        const k = gain(Math.hypot(dx, dy), dt);
+        queueMove(dx * k, dy * k);
+      }
+      return;
+    }
+
+    const c = centroid();
+    const cdx = c.x - g.cx, cdy = c.y - g.cy;
+    g.cx = c.x; g.cy = c.y;
+
+    if (g.mode === "two" && pointers.size === 2) {
+      const s = spread();
+      const ds = s - g.spread; g.spread = s;
+      g.travel += Math.hypot(cdx, cdy);
+      // Decide pinch vs scroll once: pinch when fingers spread faster than they travel.
+      if (!g.kind && (Math.abs(s - g.spread0) > 28 || g.travel > 14)) {
+        g.kind = Math.abs(s - g.spread0) > g.travel * 1.4 ? "pinch" : "scroll";
+      }
+      if (g.kind === "scroll") {
+        const dir = cfg.natural ? -1 : 1;
+        const sx = cdx * dir * cfg.scroll * 1.6, sy = cdy * dir * cfg.scroll * 1.6;
+        queueScroll(sx, sy);
+        g.samples.push({ sx, sy, t: e.timeStamp });
+        if (g.samples.length > 8) g.samples.shift();
+      } else if (g.kind === "pinch") {
+        g.zoomAcc += ds / 38;
+        const n = g.zoomAcc | 0;
+        if (n) { send(["z", n]); g.zoomAcc -= n; buzz(4); }
+      }
+    } else if (g.mode === "three" && pointers.size >= 3 && !g.swiped) {
+      g.sx = (g.sx || 0) + cdx; g.sy = (g.sy || 0) + cdy;
+      if (Math.abs(g.sx) > 70 && Math.abs(g.sx) > Math.abs(g.sy) * 1.5) {
+        send(["x", g.sx < 0 ? "back" : "forward"]); g.swiped = true; buzz(14);
+      } else if (Math.abs(g.sy) > 70 && Math.abs(g.sy) > Math.abs(g.sx) * 1.5) {
+        send(["x", g.sy < 0 ? "overview" : "desktop"]); g.swiped = true; buzz(14);
+      }
+    }
+  });
+
+  function endPointer(e) {
+    if (!pointers.has(e.pointerId)) return;
+    const p = pointers.get(e.pointerId);
+    pointers.delete(e.pointerId);
+    if (!g) return;
+
+    if (pointers.size > 0) {
+      // A finger lifted mid-gesture: re-anchor so the centroid doesn't jump.
+      if (g.mode === "move" && !dragging) return;
+      resetMulti(true);
+      return;
+    }
+
+    clearTimeout(holdTimer);
+    pad.classList.remove("active");
+    const dur = e.timeStamp - g.t0;
+    const isTap = g.moved < TAP_SLOP * g.max && dur < (g.max === 1 ? TAP_MS : TAP_MS + 60);
+
+    if (dragging) {
+      endDrag();
+    } else if (isTap && e.type !== "pointercancel") {
+      if (g.max === 1 && cfg.tap) { send(["c", "l"]); buzz(6); ripple(p.x, p.y); }
+      else if (g.max === 2) { send(["c", "r"]); buzz([6, 40, 6]); ripple(p.x, p.y, "95,224,242"); }
+      else if (g.max >= 3) { send(["c", "m"]); buzz(10); ripple(p.x, p.y, "255,196,107"); }
+    } else if (g.mode === "two" && g.kind === "scroll" && cfg.inertia) {
+      startInertia(g.samples, e.timeStamp);
+    }
+    g = null;
+  }
+  pad.addEventListener("pointerup", endPointer);
+  pad.addEventListener("pointercancel", endPointer);
+  pad.addEventListener("lostpointercapture", endPointer);
+
+  function startDrag() {
+    if (!g || pointers.size !== 1 || g.moved > TAP_SLOP) return;
+    dragging = true;
+    send(["d", "l"]);
+    buzz(22);
+    pad.classList.add("dragging");
+    const p = [...pointers.values()][0];
+    ripple(p.x, p.y, "95,224,242");
+  }
+  function endDrag() {
+    dragging = false;
+    send(["u", "l"]);
+    buzz(8);
+    pad.classList.remove("dragging");
+  }
+
+  /* ------------------------------------------------------------------ scroll momentum */
+  function velocityFrom(samples, now) {
+    const recent = samples.filter((s) => now - s.t < 90);
+    if (recent.length < 2) return { vx: 0, vy: 0 };
+    const span = Math.max(recent[recent.length - 1].t - recent[0].t, 16);
+    let sx = 0, sy = 0;
+    for (const s of recent.slice(1)) { sx += s.sx; sy += s.sy; }
+    return { vx: sx / span, vy: sy / span };
+  }
+
+  function startInertia(samples, now) {
+    let { vx, vy } = velocityFrom(samples, now);
+    if (Math.hypot(vx, vy) < 0.25) return;
+    let last = performance.now();
+    const step = (t) => {
+      const dt = Math.min(t - last, 40); last = t;
+      const decay = Math.pow(0.9955, dt);      // ~ iOS-like deceleration
+      vx *= decay; vy *= decay;
+      if (Math.hypot(vx, vy) < 0.03) { inertiaRaf = 0; return; }
+      queueScroll(vx * dt, vy * dt);
+      inertiaRaf = requestAnimationFrame(step);
+    };
+    inertiaRaf = requestAnimationFrame(step);
+  }
+  function stopInertia() { if (inertiaRaf) { cancelAnimationFrame(inertiaRaf); inertiaRaf = 0; } }
+
+  /* ------------------------------------------------------------------ scroll strip */
+  const strip = $("strip"), track = strip.querySelector(".strip-track");
+  let stripY = null, stripOffset = 0, stripSamples = [];
+  strip.addEventListener("pointerdown", (e) => {
+    e.preventDefault(); stopInertia();
+    try { strip.setPointerCapture(e.pointerId); } catch {}
+    stripY = e.clientY; stripSamples = []; strip.classList.add("active"); buzz(4);
+  });
+  strip.addEventListener("pointermove", (e) => {
+    if (stripY === null) return;
+    const dy = e.clientY - stripY; stripY = e.clientY;
+    const dir = cfg.natural ? -1 : 1;
+    const sy = dy * dir * cfg.scroll * 2.2;
+    queueScroll(0, sy);
+    stripSamples.push({ sx: 0, sy, t: e.timeStamp }); if (stripSamples.length > 8) stripSamples.shift();
+    stripOffset = (stripOffset + dy) % 40;
+    track.style.transform = `translateY(${stripOffset}px)`;
+  });
+  const stripEnd = (e) => {
+    if (stripY === null) return;
+    stripY = null; strip.classList.remove("active");
+    if (cfg.inertia) startInertia(stripSamples, e.timeStamp);
+  };
+  strip.addEventListener("pointerup", stripEnd);
+  strip.addEventListener("pointercancel", stripEnd);
+
+  /* ------------------------------------------------------------------ physical buttons */
+  for (const btn of document.querySelectorAll(".mbtn")) {
+    const name = btn.dataset.btn;
+    let id = null;
+    btn.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      if (id !== null) return;
+      id = e.pointerId;
+      try { btn.setPointerCapture(id); } catch {}
+      btn.classList.add("down");
+      send(["d", name]); buzz(8);
+    });
+    const release = (e) => {
+      if (e.pointerId !== id) return;
+      id = null; btn.classList.remove("down");
+      send(["u", name]);
+    };
+    btn.addEventListener("pointerup", release);
+    btn.addEventListener("pointercancel", release);
+  }
+
+  /* ------------------------------------------------------------------ sheets */
+  const scrim = $("scrim");
+  let openSheet = null;
+  function toggleSheet(sheet, btn) {
+    const opening = openSheet !== sheet;
+    closeSheets();
+    if (!opening) return;
+    openSheet = sheet;
+    sheet.classList.add("open"); sheet.setAttribute("aria-hidden", "false");
+    btn.classList.add("on"); scrim.classList.add("show");
+    if (sheet.id === "sheetKeyboard") setTimeout(() => typer.focus(), 60);
+  }
+  function closeSheets() {
+    for (const s of document.querySelectorAll(".sheet")) { s.classList.remove("open"); s.setAttribute("aria-hidden", "true"); }
+    for (const b of document.querySelectorAll(".icon-btn")) b.classList.remove("on");
+    scrim.classList.remove("show"); openSheet = null;
+    typer.blur();
+  }
+  $("btnKeyboard").addEventListener("click", () => toggleSheet($("sheetKeyboard"), $("btnKeyboard")));
+  $("btnSettings").addEventListener("click", () => toggleSheet($("sheetSettings"), $("btnSettings")));
+  scrim.addEventListener("click", closeSheets);
+
+  // Swipe a sheet down by its grab handle to close.
+  for (const sheet of document.querySelectorAll(".sheet")) {
+    let y0 = null;
+    const grab = sheet.querySelector(".grab");
+    sheet.addEventListener("touchstart", (e) => { if (e.target === grab || sheet.scrollTop <= 0) y0 = e.touches[0].clientY; }, { passive: true });
+    sheet.addEventListener("touchend", (e) => {
+      if (y0 !== null && e.changedTouches[0].clientY - y0 > 70 && document.activeElement?.type !== "range") closeSheets();
+      y0 = null;
+    }, { passive: true });
+  }
+
+  /* ------------------------------------------------------------------ keyboard */
+  // The input holds a zero-width sentinel so Backspace on an "empty" field still fires.
+  const typer = $("typer");
+  const SENT = "​";
+  let typed = "";
+  typer.value = SENT;
+
+  function syncTyped() {
+    let v = typer.value;
+    if (!v.startsWith(SENT)) {           // sentinel deleted => user pressed backspace on empty
+      send(["k", "backspace"]);
+      v = SENT + v.replace(/​/g, "");
+      typer.value = v;
+    }
+    const now = v.slice(1);
+    let i = 0;
+    while (i < now.length && i < typed.length && now[i] === typed[i]) i++;
+    for (let n = typed.length - i; n > 0; n--) send(["k", "backspace"]);
+    const added = now.slice(i);
+    if (added) send(["t", added]);
+    typed = now;
+  }
+  typer.addEventListener("input", (e) => { if (!e.isComposing) syncTyped(); });
+  typer.addEventListener("compositionend", syncTyped);
+  typer.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); send(["k", "enter"]);
+      typer.value = SENT; typed = ""; buzz(6);
+    }
+  });
+
+  for (const b of document.querySelectorAll("[data-key],[data-combo]")) {
+    b.addEventListener("pointerdown", (e) => e.preventDefault());   // keep the soft keyboard open
+    b.addEventListener("click", () => {
+      if (b.dataset.key) {
+        send(["k", b.dataset.key]);
+        if (b.dataset.key === "enter" || b.dataset.key === "backspace") { typer.value = SENT; typed = ""; }
+      } else send(["x", b.dataset.combo]);
+      buzz(5);
+    });
+  }
+
+  /* ------------------------------------------------------------------ settings UI */
+  const sliders = [["sSpeed", "oSpeed", "speed", (v) => `${v.toFixed(1)}×`],
+                   ["sAccel", "oAccel", "accel", (v) => (v ? `${Math.round(v * 50)}%` : "Off")],
+                   ["sScroll", "oScroll", "scroll", (v) => `${v.toFixed(1)}×`]];
+  const toggles = [["tNatural", "natural"], ["tInertia", "inertia"], ["tTap", "tap"],
+                   ["tHaptics", "haptics"], ["tGlow", "glow"], ["tLefty", "lefty"]];
+
+  function paintSlider(el) {
+    const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+    el.style.setProperty("--fill", `${pct}%`);
+  }
+  function loadUI() {
+    for (const [sid, oid, key, fmt] of sliders) {
+      const el = $(sid); el.value = cfg[key]; $(oid).textContent = fmt(+cfg[key]); paintSlider(el);
+    }
+    for (const [tid, key] of toggles) $(tid).checked = !!cfg[key];
+    document.body.classList.toggle("lefty", cfg.lefty);
+  }
+  for (const [sid, oid, key, fmt] of sliders) {
+    $(sid).addEventListener("input", (e) => {
+      cfg[key] = +e.target.value; $(oid).textContent = fmt(cfg[key]); paintSlider(e.target); saveCfg();
+    });
+  }
+  for (const [tid, key] of toggles) {
+    $(tid).addEventListener("change", (e) => {
+      cfg[key] = e.target.checked; saveCfg();
+      if (key === "lefty") document.body.classList.toggle("lefty", cfg.lefty);
+      buzz(5);
+    });
+  }
+  $("btnReset").addEventListener("click", () => { Object.assign(cfg, DEFAULTS); saveCfg(); loadUI(); buzz(10); });
+
+  const fsBtn = $("btnFullscreen");
+  const root = document.documentElement;
+  if (!root.requestFullscreen && !root.webkitRequestFullscreen) fsBtn.hidden = true;
+  fsBtn.addEventListener("click", () => {
+    if (document.fullscreenElement) document.exitFullscreen();
+    else (root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: "hide" });
+    closeSheets();
+  });
+
+  /* ------------------------------------------------------------------ misc */
+  // Block browser gestures (pinch-zoom, long-press menus, rubber banding).
+  for (const ev of ["gesturestart", "gesturechange", "contextmenu", "dblclick"]) {
+    document.addEventListener(ev, (e) => e.preventDefault());
+  }
+  document.addEventListener("touchmove", (e) => {
+    if (!e.target.closest(".sheet")) e.preventDefault();
+  }, { passive: false });
+
+  // Keep the screen awake where the browser allows it (secure contexts only).
+  async function wake() { try { if (navigator.wakeLock) await navigator.wakeLock.request("screen"); } catch {} }
+  document.addEventListener("pointerdown", wake, { once: true });
+
+  // Safety: if the page is hidden mid-drag, release everything.
+  window.addEventListener("pagehide", () => { if (dragging) endDrag(); });
+
+  loadUI();
+  connect();
+})();
