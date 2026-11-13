@@ -23,6 +23,27 @@ if not exist "glide.py" (
 
 rem --- 2. Find a real Python 3.9+ (skips the Microsoft Store placeholder) -----------------
 call :findpy
+rem Look for a real python.exe on disk first, so Windows' "app execution alias" stubs and the
+rem Python install manager's first-run questions can never stall this script.
+set "PY="
+for /d %%D in ("%LOCALAPPDATA%\Programs\Python\Python3*" "%LOCALAPPDATA%\Python\pythoncore-3*" "%ProgramFiles%\Python3*") do (
+  if not defined PY if exist "%%~D\python.exe" "%%~D\python.exe" -c "import sys; sys.exit(sys.version_info < (3, 9))" <nul >nul 2>&1 && set PY="%%~D\python.exe"
+)
+if defined PY exit /b 0
+rem Then the launchers. Input comes from NUL, so any prompt gets its default answer instead of waiting.
+py -3 -c "import sys; sys.exit(sys.version_info < (3, 9))" <nul >nul 2>&1 && set "PY=py -3" && exit /b 0
+python -c "import sys; sys.exit(sys.version_info < (3, 9))" <nul >nul 2>&1 && set "PY=python" && exit /b 0
+exit /b 0
+
+:fail
+)
+if not exist "glide.py" (
+  echo   [X] glide.py is missing. Make sure start.bat is inside the "glide" folder.
+  goto :fail
+)
+
+rem --- 2. Find a real Python 3.9+ (skips the Microsoft Store placeholder) -----------------
+call :findpy
 if not defined PY (
   echo   Python is not installed yet. Installing it now - this takes a minute or two...
   echo.
@@ -49,7 +70,7 @@ echo   Using Python: !PY!
 rem --- 3. Private environment with Glide's two libraries ---------------------------------
 if not exist ".venv\Scripts\python.exe" (
   echo   First run: setting things up...
-  !PY! -m venv .venv
+  !PY! -m venv .venv <nul
 )
 set "RUN=.venv\Scripts\python.exe"
 if not exist ".venv\Scripts\python.exe" (
