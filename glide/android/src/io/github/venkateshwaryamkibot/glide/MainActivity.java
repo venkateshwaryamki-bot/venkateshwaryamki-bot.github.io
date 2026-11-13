@@ -25,12 +25,16 @@ import android.webkit.WebViewClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.net.HttpURLConnection;
 import java.net.InterfaceAddress;
 import java.net.NetworkInterface;
 import java.net.SocketTimeoutException;
+import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
@@ -221,6 +225,15 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void setVolumeKeys(boolean on) { volumeKeys = on; }
 
+        /** USB-cable check: is a computer forwarding Glide to this phone's localhost (adb reverse)? */
+        @JavascriptInterface
+        public void usbProbe(final int port) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() { runUsbProbe(port); }
+            }, "glide-usb").start();
+        }
+
         @JavascriptInterface
         public void discover() {
             new Thread(new Runnable() {
@@ -228,6 +241,32 @@ public class MainActivity extends Activity {
                 public void run() { runDiscovery(); }
             }, "glide-discovery").start();
         }
+    }
+
+    /* ---------------------------------------------------------------- USB cable */
+    private void runUsbProbe(int port) {
+        String result = "null";
+        HttpURLConnection conn = null;
+        try {
+            // Native request: the key endpoint deliberately has no CORS, so web pages can't read it.
+            conn = (HttpURLConnection) new URL("http://127.0.0.1:" + port + "/usb-key").openConnection();
+            conn.setConnectTimeout(700);
+            conn.setReadTimeout(1500);
+            conn.setUseCaches(false);
+            if (conn.getResponseCode() == 200) {
+                InputStream in = conn.getInputStream();
+                ByteArrayOutputStream buf = new ByteArrayOutputStream();
+                byte[] b = new byte[1024];
+                int n;
+                while ((n = in.read(b)) > 0 && buf.size() < 8192) buf.write(b, 0, n);
+                JSONObject o = new JSONObject(buf.toString("UTF-8"));
+                if (o.has("k")) result = o.toString();
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (conn != null) conn.disconnect();
+        }
+        js("window.glideUsb && window.glideUsb(" + result + ")");
     }
 
     /* ---------------------------------------------------------------- LAN discovery */

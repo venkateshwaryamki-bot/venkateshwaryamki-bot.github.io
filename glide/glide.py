@@ -23,15 +23,18 @@ import mimetypes
 import os
 import platform
 import secrets
+import shutil
 import socket
 import struct
 import sys
 import time
 import webbrowser
+import zipfile
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
+from urllib.request import urlopen
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 DISCOVER_MSG = b"GLIDE_DISCOVER"
 HERE = Path(__file__).resolve().parent
 STATIC = HERE / "static"
@@ -349,12 +352,18 @@ class GlideServer:
             await self.respond(writer, 405, b"Method not allowed", "text/plain")
             return
 
-        if url.path == "/pair":
-            # Only the computer itself may see the pairing key.
-            if not ipaddress.ip_address(peer[0]).is_loopback:
+        if url.path in ("/pair", "/usb-key"):
+            # Only this computer itself - or a phone on a USB cable via `adb reverse`,
+            # which also arrives from loopback - may read the pairing key.
+            if not self.is_local(peer, headers):
                 await self.respond(writer, 403, b"Forbidden", "text/plain")
                 return
-            await self.respond(writer, 200, self.pair_page().encode(), "text/html; charset=utf-8")
+            if url.path == "/pair":
+                await self.respond(writer, 200, self.pair_page().encode(), "text/html; charset=utf-8")
+            else:
+                body = json.dumps({"k": self.token, "id": self.server_id, "name": socket.gethostname(),
+                                   "os": SYSTEM, "port": self.port}).encode()
+                await self.respond(writer, 200, body, "application/json")
             return
 
         path = "index.html" if url.path in ("/", "") else url.path.lstrip("/")
@@ -368,6 +377,24 @@ class GlideServer:
         if ctype.startswith("text/") or ctype.endswith(("javascript", "json", "svg+xml")):
             ctype += "; charset=utf-8"
         await self.respond(writer, 200, file.read_bytes(), ctype, head=(method == "HEAD"))
+
+    def is_local(self, peer, headers) -> bool:
+        """Loopback peer *and* a loopback Host header.
+
+        The Host check defeats DNS-rebinding: a malicious website that points its own
+        domain at 127.0.0.1 still sends `Host: evil.example`. No CORS headers are ever
+        sent, so other websites can't read these responses cross-origin either.
+        """
+        try:
+            if not ipaddress.ip_address(peer[0]).is_loopback:
+                return False
+        except ValueError:
+            return False
+        host = headers.get("host", "").lower()
+        allowed = {f"127.0.0.1:{self.port}", f"localhost:{self.port}", f"[::1]:{self.port}"}
+        if host not in allowed:
+            return False
+        return headers.get("sec-fetch-site", "same-origin") in ("same-origin", "none")
 
     async def respond(self, writer, status, body: bytes, ctype: str, head=False):
         reason = {200: "OK", 403: "Forbidden", 404: "Not Found", 405: "Method Not Allowed"}[status]
@@ -403,7 +430,8 @@ class GlideServer:
         ws = WebSocket(reader, writer)
         self.clients.add(ws)
         device = headers.get("user-agent", "")
-        log(f"{c('Connected', '38;5;114')}  {peer[0]}  {c(short_device(device), '2')}", "ok")
+        via = "USB cable" if ipaddress.ip_address(peer[0]).is_loopback else peer[0]
+        log(f"{c('Connected', '38;5;114')}  {via}  {c(short_device(device), '2')}", "ok")
         await ws.send(json.dumps({"t": "hello", "host": socket.gethostname(), "id": self.server_id,
                                   "os": SYSTEM, "v": VERSION}))
         try:
@@ -417,7 +445,7 @@ class GlideServer:
         finally:
             self.clients.discard(ws)
             self.input.release_all()   # never leave a button stuck down
-            log(f"Disconnected  {peer[0]}", "info")
+            log(f"Disconnected  {via}", "info")
             try:
                 writer.close()
             except Exception:
@@ -465,6 +493,119 @@ class GlideServer:
         return (tpl.replace("{{QR}}", svg)
                    .replace("{{URL}}", self.pair_url)
                    .replace("{{HOST}}", socket.gethostname()))
+
+
+class AdbBridge:
+    """USB-cable mode: forwards the phone's localhost:PORT to this computer.
+
+    Whenever an Android phone with USB debugging is plugged in, runs
+    `adb reverse tcp:PORT tcp:PORT`, so the Glide app reaches the server over
+    the cable at 127.0.0.1 - no Wi-Fi needed and ~1 ms latency.
+    """
+
+    TOOLS_URL = "https://dl.google.com/android/repository/platform-tools-latest-{}.zip"
+
+    def __init__(self, port: int, auto_install: bool, adb_path: str | None):
+        self.port = port
+        self.auto_install = auto_install
+        self.adb = adb_path or self.find()
+        self.ready: dict[str, str] = {}   # serial -> model
+        self.warned: set[str] = set()
+
+    @staticmethod
+    def find() -> str | None:
+        exe = "adb.exe" if SYSTEM == "Windows" else "adb"
+        found = shutil.which("adb")
+        if found:
+            return found
+        home = Path.home()
+        candidates = [HERE / "platform-tools" / exe]
+        if SYSTEM == "Windows":
+            local = Path(os.environ.get("LOCALAPPDATA", home / "AppData/Local"))
+            candidates.append(local / "Android/Sdk/platform-tools" / exe)
+        elif SYSTEM == "Darwin":
+            candidates += [home / "Library/Android/sdk/platform-tools/adb",
+                           Path("/opt/homebrew/bin/adb"), Path("/usr/local/bin/adb")]
+        else:
+            candidates.append(home / "Android/Sdk/platform-tools/adb")
+        for cnd in candidates:
+            if cnd.is_file():
+                return str(cnd)
+        return None
+
+    def install(self) -> str | None:
+        """Download Google's official platform-tools (adb) next to glide.py."""
+        plat = {"Windows": "windows", "Darwin": "darwin"}.get(SYSTEM, "linux")
+        dest = HERE / "platform-tools"
+        tmp = HERE / "platform-tools.zip"
+        with urlopen(self.TOOLS_URL.format(plat), timeout=60) as r, open(tmp, "wb") as f:
+            shutil.copyfileobj(r, f)
+        with zipfile.ZipFile(tmp) as z:
+            z.extractall(HERE)
+        tmp.unlink(missing_ok=True)
+        exe = dest / ("adb.exe" if SYSTEM == "Windows" else "adb")
+        if SYSTEM != "Windows":
+            exe.chmod(0o755)
+        return str(exe) if exe.is_file() else None
+
+    async def _run(self, *args: str, timeout: float = 8.0) -> tuple[int, str]:
+        kwargs = {}
+        if SYSTEM == "Windows":
+            kwargs["creationflags"] = 0x08000000  # CREATE_NO_WINDOW
+        proc = await asyncio.create_subprocess_exec(
+            self.adb, *args, stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.STDOUT, **kwargs)
+        try:
+            out, _ = await asyncio.wait_for(proc.communicate(), timeout)
+        except asyncio.TimeoutError:
+            proc.kill()
+            return 1, ""
+        return proc.returncode or 0, out.decode(errors="replace")
+
+    async def run(self) -> None:
+        if not self.adb and self.auto_install:
+            log("USB mode: downloading Android platform-tools (adb, ~7 MB) from Google…")
+            try:
+                self.adb = await asyncio.to_thread(self.install)
+            except Exception as exc:
+                log(f"Couldn't download adb ({exc}). USB tethering and Wi-Fi still work.", "warn")
+        if not self.adb:
+            log("USB cable mode needs adb — see README › Wired connection", "warn")
+            return
+        log(f"USB cable mode ready — plug in your phone {c('(USB debugging on)', '2')}")
+        while True:
+            try:
+                await self.poll()
+            except (OSError, ValueError) as exc:
+                log(f"adb error: {exc}", "warn")
+                await asyncio.sleep(10)
+            await asyncio.sleep(2)
+
+    async def poll(self) -> None:
+        code, out = await self._run("devices")
+        if code != 0:
+            return
+        present = {}
+        for line in out.splitlines()[1:]:
+            parts = line.split()
+            if len(parts) >= 2 and not line.startswith("*"):
+                present[parts[0]] = parts[1]
+        for serial, state in present.items():
+            if state == "device" and serial not in self.ready:
+                rc, msg = await self._run("-s", serial, "reverse", f"tcp:{self.port}", f"tcp:{self.port}")
+                if rc != 0:
+                    log(f"adb reverse failed: {msg.strip()}", "warn")
+                    continue
+                _, model = await self._run("-s", serial, "shell", "getprop", "ro.product.model")
+                self.ready[serial] = model.strip() or serial
+                log(f"{c('USB cable', '38;5;117')}  {self.ready[serial]} linked — open the Glide app", "ok")
+            elif state == "unauthorized" and serial not in self.warned:
+                self.warned.add(serial)
+                log("Phone found on USB — tap “Allow USB debugging” on its screen", "warn")
+        for serial in list(self.ready):
+            if present.get(serial) != "device":
+                log(f"USB cable  {self.ready.pop(serial)} unplugged", "info")
+                self.warned.discard(serial)
 
 
 class Discovery(asyncio.DatagramProtocol):
@@ -539,6 +680,9 @@ def banner(server: GlideServer) -> None:
     print(f"       {c(server.pair_url, '4;38;5;117')}")
     print(f"  {c('3', '38;5;147')}  Tip: “Add to Home Screen” for a full-screen app")
     print()
+    print(f"  {c('⌁ Cable', '38;5;117')}  USB-C to USB-C works too: turn on USB debugging (fastest)")
+    print(f"            or USB tethering on the phone, then open the Glide app")
+    print()
     if SYSTEM == "Darwin":
         log("macOS: allow your terminal in System Settings › Privacy & Security › Accessibility", "warn")
     if SYSTEM == "Linux" and os.environ.get("XDG_SESSION_TYPE") == "wayland":
@@ -561,6 +705,9 @@ async def main_async(args) -> None:
     except OSError:
         log("Auto-discovery unavailable (UDP port busy) — pairing by QR still works", "warn")
     banner(server)
+    if not args.no_usb:
+        asyncio.get_running_loop().create_task(
+            AdbBridge(args.port, not args.no_adb_download, args.adb).run())
     if not args.no_browser:
         try:
             webbrowser.open(f"http://127.0.0.1:{args.port}/pair")
@@ -576,6 +723,9 @@ def main() -> None:
     ap.add_argument("--host", help="IP address to advertise in the QR code")
     ap.add_argument("--new-key", action="store_true", help="generate a new pairing key")
     ap.add_argument("--no-browser", action="store_true", help="don't open the pairing page")
+    ap.add_argument("--no-usb", action="store_true", help="disable USB-cable mode (adb reverse)")
+    ap.add_argument("--no-adb-download", action="store_true", help="don't download adb automatically")
+    ap.add_argument("--adb", help="path to an existing adb executable")
     args = ap.parse_args()
     try:
         asyncio.run(main_async(args))

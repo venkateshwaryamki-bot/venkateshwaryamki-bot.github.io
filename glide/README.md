@@ -31,6 +31,38 @@ To install, download `Glide.apk` to the phone, open it, and allow "Install unkno
 when Android asks. The first pairing needs the QR code. After that, just open the app.
 To rebuild it, run `android/build.sh` (see the comments at the top of that file).
 
+## Wired connection (USB-C cable)
+
+You can connect over a USB-C to USB-C cable (or USB-C to USB-A) with no Wi-Fi at all.
+**HDMI can't do this.** HDMI only sends video *out* of the laptop, and phones have no HDMI
+input, so touch data can't travel back over it.
+
+### Option 1: USB debugging (fastest, about 1 ms, Android)
+
+1. On the phone, enable **Developer options**: Settings › About phone, then tap
+   *Build number* 7 times.
+2. Turn on **Settings › Developer options › USB debugging**.
+3. Start Glide on the laptop and plug in the cable. Tap **Allow** on the phone's
+   "Allow USB debugging?" prompt (tick *Always allow from this computer*).
+4. Open the Glide app. It pairs over the cable by itself (no QR code needed) and shows a
+   **USB** badge. Unplug the cable and it switches to Wi-Fi automatically.
+
+Glide uses Google's `adb` tool for this. If `adb` isn't installed, Glide downloads the
+official platform-tools (~7 MB) next to `glide.py` on first run. Use `--no-adb-download`
+to prevent that, or `--adb /path/to/adb` to use your own. On Windows, some phones
+(for example Samsung) also need the manufacturer's USB driver.
+
+In a phone **browser** (no app) with USB debugging, open `http://localhost:8765` instead.
+
+### Option 2: USB tethering (no developer settings)
+
+1. Plug in the cable and turn on **Settings › Network › Hotspot & tethering › USB tethering**.
+2. Open the Glide app. It finds the laptop over the cable network automatically.
+
+Your laptop may then use the phone's mobile data for internet. Turn mobile data off if
+you don't want that. iPhones can do the same with Personal Hotspot over the cable,
+using the browser version.
+
 ## Gestures
 
 | Gesture | Action |
@@ -67,6 +99,8 @@ python glide.py --port 8766     # use another port
 python glide.py --host 192.168.1.20   # put a specific IP in the QR code
 python glide.py --new-key       # make a new pairing key (unpairs old phones)
 python glide.py --no-browser    # don't open the pairing page
+python glide.py --no-usb        # turn off USB-cable (adb) mode
+python glide.py --adb PATH      # use a specific adb executable
 ```
 
 ## How it works
@@ -79,6 +113,8 @@ python glide.py --no-browser    # don't open the pairing page
   If Wi-Fi stalls, motion is merged instead of queued, so the pointer never lags behind
   your finger. A canvas draws the touch-glow effect.
 - **Security:** connections need a random pairing key that is embedded in the QR code
-  (stored in `~/.glide/token`). The pairing page is only served to the laptop itself.
+  (stored in `~/.glide/token`). The pairing page and the USB key handoff are only served to
+  the laptop itself or the phone on the cable. They check the Host header (so DNS-rebinding
+  tricks fail) and send no CORS headers, so websites open on the laptop can't read the key.
   Anyone without the key is rejected. Traffic is unencrypted LAN HTTP, so use Glide on
   networks you trust.

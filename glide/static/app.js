@@ -41,10 +41,19 @@
     else webToken = store.get("glide.k", null);
   }
 
+  // USB cable (Android app): the computer forwards its port to this phone's localhost via
+  // `adb reverse`. When the current computer is reachable that way, the cable always wins.
+  let usbToken = null, usbPort = 8765, transport = "wifi";
+  const IS_LOCAL_PAGE = !NATIVE && /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+
   function target() {
-    if (!NATIVE) return webToken ? { url: `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`, token: webToken } : null;
+    if (!NATIVE) {
+      return webToken ? { url: `${location.protocol === "https:" ? "wss" : "ws"}://${location.host}/ws`, token: webToken, usb: IS_LOCAL_PAGE } : null;
+    }
     const pc = currentPc();
-    return pc ? { url: `ws://${pc.host}:${pc.port}/ws`, token: pc.token } : null;
+    if (!pc) return null;
+    if (usbToken === pc.token) return { url: `ws://127.0.0.1:${usbPort}/ws`, token: pc.token, usb: true };
+    return pc.host ? { url: `ws://${pc.host}:${pc.port}/ws`, token: pc.token, usb: false } : { wait: true };
   }
 
   /* ------------------------------------------------------------------ connection */
@@ -62,6 +71,9 @@
     clearTimeout(reTimer);
     const t = target();
     if (!t) { showPairing(); setStatus("offline", "Not paired"); return; }
+    if (t.wait) {   // paired over USB only, cable unplugged: wait for cable or discovery
+      failures = Math.max(failures, 2); scheduleReconnect(); return;
+    }
     setStatus("connecting", retry ? "Reconnecting…" : "Connecting…");
     let sock;
     try { sock = new WebSocket(`${t.url}?k=${encodeURIComponent(t.token)}`); }
@@ -71,6 +83,7 @@
     sock.onopen = () => {
       if (sock !== ws) return;
       online = true; retry = 0; failures = 0;
+      transport = t.usb ? "usb" : "wifi";
       setStatus("online", "Connected");
       ping(); clearInterval(pingTimer); pingTimer = setInterval(ping, 2000);
       if (NATIVE) hidePairing();
@@ -91,6 +104,7 @@
     };
     sock.onclose = () => {
       if (sock !== ws) return;
+      if (t.usb && NATIVE) { usbToken = null; transport = "wifi"; retry = 0; }   // cable pulled: fall back to Wi-Fi now
       const wasOnline = online;
       online = false; clearInterval(pingTimer);
       if (!wasOnline) failures++;
@@ -135,6 +149,28 @@
     if (moved && !online) { toast("Found your computer at its new address"); reconnectNow(); }
   };
 
+  /* ------------------------------------------------------------------ USB cable (app) */
+  let usbProbing = false;
+  function usbCheck() {
+    if (!NATIVE || usbProbing || transport === "usb" || document.hidden) return;
+    usbProbing = true;
+    try { window.GlideNative.usbProbe(8765); } catch { usbProbing = false; }
+  }
+  window.glideUsb = (info) => {
+    usbProbing = false;
+    if (!info || !info.k) { if (transport !== "usb") usbToken = null; return; }
+    // A computer is on the cable. Pair with it automatically (the cable is the proof)
+    // and switch to it - plugging in is a clear signal of intent.
+    let pc = pcs.find((p) => p.token === info.k) || pcs.find((p) => info.id && p.id === info.id);
+    if (pc) { pc.token = info.k; pc.id = info.id; pc.name = info.name || pc.name; }
+    else { pc = { token: info.k, host: null, port: info.port || 8765, id: info.id, name: info.name, os: info.os }; pcs.push(pc); }
+    usbToken = info.k; usbPort = info.port || 8765;
+    const switching = transport !== "usb" || curToken !== info.k;
+    curToken = info.k; savePcs(); renderPcs();
+    if (switching) { toast("USB cable connected"); buzz(14); reconnectNow(); }
+  };
+  if (NATIVE) setInterval(usbCheck, 2500);
+
   /* ------------------------------------------------------------------ pairing screen */
   const pairing = $("pairing"), pcList = $("pcList");
   const PC_ICON = '<svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8 20h8M12 16.5V20"/></svg>';
@@ -155,7 +191,10 @@
       seen.add(d.id);
       rows.push({ name: d.name, sub: `${d.os || "Computer"} · ${d.host}`, pc, disc: d });
     }
-    for (const pc of pcs) if (!pc.id || !seen.has(pc.id)) rows.push({ name: pc.name || pc.host, sub: `Saved · ${pc.host}`, pc, away: true });
+    for (const pc of pcs) {
+      if (pc.token === usbToken) rows.unshift({ name: pc.name || "Computer", sub: "Connected by USB cable", pc, usb: true });
+      else if (!pc.id || !seen.has(pc.id)) rows.push({ name: pc.name || pc.host, sub: pc.host ? `Saved · ${pc.host}` : "Saved · USB", pc, away: true });
+    }
     pcList.innerHTML = "";
     if (!rows.length) {
       pcList.innerHTML = `<li class="empty">${discovering ? "Looking for computers…" : "No computers found. Make sure Glide is running."}</li>`;
@@ -164,7 +203,8 @@
     for (const r of rows) {
       const li = document.createElement("li");
       if (r.pc && r.pc.token === curToken) li.className = "current";
-      const tag = r.pc ? (r.away ? '<span class="tag away">Saved</span>' : '<span class="tag paired">Paired</span>') : '<span class="tag new">New</span>';
+      if (r.pc && r.pc.token === usbToken && !r.usb) continue;
+      const tag = r.usb ? '<span class="tag usb">USB</span>' : r.pc ? (r.away ? '<span class="tag away">Saved</span>' : '<span class="tag paired">Paired</span>') : '<span class="tag new">New</span>';
       li.innerHTML = `<span class="pc-ic">${PC_ICON}</span><span class="pc-txt"><div class="pc-name">${escapeHtml(r.name || "Computer")}</div><div class="pc-sub">${escapeHtml(r.sub)}</div></span>${tag}${r.pc ? '<button class="forget" aria-label="Forget">×</button>' : ""}`;
       li.addEventListener("click", (e) => {
         if (e.target.closest(".forget")) {
@@ -268,7 +308,8 @@
   function renderStatus() {
     if (!online) return;
     const name = hostName ? escapeHtml(hostName) : "Connected";
-    setStatus("online", `${name}${rtt ? ` <span class="ms">· ${rtt} ms</span>` : ""}`);
+    const via = transport === "usb" ? '<span class="via usb">USB</span>' : (NATIVE ? '<span class="via">Wi-Fi</span>' : "");
+    setStatus("online", `${via}${name}${rtt ? ` <span class="ms">· ${rtt} ms</span>` : ""}`);
   }
 
   function escapeHtml(s) { return s.replace(/[&<>"']/g, (ch) => `&#${ch.charCodeAt(0)};`); }
@@ -750,9 +791,15 @@
     if (!pairing.hidden && currentPc() && online) { hidePairing(); return true; }
     return false;
   };
-  window.glideResume = () => { if (target() && (!ws || ws.readyState > 1)) { retry = 0; connect(); } };
+  window.glideResume = () => { usbCheck(); if (target() && (!ws || ws.readyState > 1)) { retry = 0; connect(); } };
 
   loadUI();
   if (NATIVE) { try { window.GlideNative.setVolumeKeys(!!cfg.volkeys); } catch {} }
-  connect();
+  if (IS_LOCAL_PAGE && !webToken) {
+    // Opened as http://localhost:8765 over a USB cable (adb reverse): fetch the key same-origin.
+    fetch("/usb-key", { cache: "no-store" }).then((r) => r.json())
+      .then((j) => { webToken = j.k; store.set("glide.k", webToken); })
+      .catch(() => {}).finally(connect);
+  } else connect();
+  usbCheck();
 })();
