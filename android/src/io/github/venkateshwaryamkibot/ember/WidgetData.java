@@ -161,7 +161,8 @@ final class WidgetData {
         int c = h.optBoolean("skip") ? 0 : h.optInt("count");
         int tg = target(h);
         h.put("skip", false);
-        h.put("count", c >= tg ? 0 : (tg > 1 ? c + 1 : 1));
+        boolean timed = "time".equals(h.optString("goal"));
+        h.put("count", c >= tg ? 0 : (timed ? tg : tg > 1 ? c + 1 : 1)); // timed habits complete in one tap
     }
     private static JSONObject find(JSONObject d, String id) {
         JSONArray hs = d.optJSONArray("habits");

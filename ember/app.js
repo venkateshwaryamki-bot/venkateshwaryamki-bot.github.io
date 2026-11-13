@@ -4,7 +4,7 @@
 /* ================= Constants ================= */
 const STORE = 'ember.v1';
 const NATIVE = window.EmberAndroid || null; // present inside the Android app
-const VERSION = '1.3.0';
+const VERSION = '1.4.0';
 const COLORS = ['#F2685B', '#F28C38', '#E9B23F', '#93C83F', '#34C38F', '#26B5B0', '#3FA2F2', '#6F7CF2', '#A26EF2', '#E8609E'];
 const OLD_COLORS = ['#FF6B6B', '#FF8A3D', '#FFC23D', '#A6E35A', '#3DDC97', '#2CC7C9', '#4DA8FF', '#7C7CFF', '#B26BFF', '#FF6BC1'];
 const HABIT_ICONS = ['droplet', 'flower-2', 'book-open', 'dumbbell', 'footprints', 'bike', 'waves', 'activity',
@@ -39,7 +39,7 @@ const STRENGTH_ALPHA = 0.07; // exponential smoothing per scheduled day
 
 const TEMPLATES = [
   { name: 'Drink water', icon: 'droplet', emoji: '💧', color: '#3FA2F2', target: 8, unit: 'glasses', time: 'anytime', freq: { type: 'daily' }, identity: 'takes care of my body', stack: 'wake up', tiny: 'Drink one glass' },
-  { name: 'Meditate', icon: 'flower-2', emoji: '🧘', color: '#A26EF2', target: 1, time: 'morning', freq: { type: 'daily' }, identity: 'stays calm under pressure', stack: 'brush my teeth', tiny: 'Take 3 slow breaths' },
+  { name: 'Meditate', icon: 'flower-2', emoji: '🧘', color: '#A26EF2', goal: 'time', target: 10, unit: 'min', time: 'morning', freq: { type: 'daily' }, identity: 'stays calm under pressure', stack: 'brush my teeth', tiny: 'Take 3 slow breaths' },
   { name: 'Read', icon: 'book-open', emoji: '📖', color: '#E9B23F', target: 1, time: 'evening', freq: { type: 'daily' }, identity: 'is always learning', stack: 'get into bed', tiny: 'Read one page' },
   { name: 'Workout', icon: 'dumbbell', emoji: '💪', color: '#F2685B', target: 1, time: 'anytime', freq: { type: 'weekly', times: 4 }, identity: 'does the hard things', stack: 'finish work', tiny: 'Put on workout clothes' },
   { name: 'Walk 10 minutes', icon: 'footprints', emoji: '🚶', color: '#34C38F', target: 1, time: 'afternoon', freq: { type: 'daily' }, identity: 'moves every day', stack: 'eat lunch', tiny: 'Walk to the end of the street' },
@@ -47,7 +47,7 @@ const TEMPLATES = [
   { name: 'Sleep by 11 PM', icon: 'moon', emoji: '😴', color: '#6F7CF2', target: 1, time: 'evening', freq: { type: 'daily' }, identity: 'protects my energy', stack: 'set my alarm', tiny: 'Phone on the charger, outside the bedroom' },
   { name: 'No phone first hour', icon: 'smartphone', emoji: '📵', color: '#26B5B0', target: 1, time: 'morning', freq: { type: 'daily' }, identity: 'owns my attention', stack: 'wake up', tiny: 'No phone for the first 5 minutes' },
   { name: 'Gratitude', icon: 'hand-heart', emoji: '🙏', color: '#F28C38', target: 3, unit: 'things', time: 'morning', freq: { type: 'daily' }, identity: 'notices the good', stack: 'sit down for breakfast', tiny: 'Name one good thing' },
-  { name: 'Deep work', icon: 'target', emoji: '🎯', color: '#93C83F', target: 1, time: 'morning', freq: { type: 'days', days: [1, 2, 3, 4, 5] }, identity: 'does focused, meaningful work', stack: 'open my laptop', tiny: 'Two focused minutes, notifications off' },
+  { name: 'Deep work', icon: 'target', emoji: '🎯', color: '#93C83F', goal: 'time', target: 45, unit: 'min', time: 'morning', freq: { type: 'days', days: [1, 2, 3, 4, 5] }, identity: 'does focused, meaningful work', stack: 'open my laptop', tiny: 'Two focused minutes, notifications off' },
   { name: 'Eat greens', icon: 'salad', emoji: '🥗', color: '#93C83F', target: 1, time: 'afternoon', freq: { type: 'daily' }, identity: 'fuels my body well', stack: 'plate my lunch', tiny: 'One bite of vegetables' },
   { name: 'Tidy up', icon: 'sparkles', emoji: '🧹', color: '#26B5B0', target: 1, time: 'evening', freq: { type: 'daily' }, identity: 'keeps a calm space', stack: 'brush my teeth at night', tiny: 'Put away one thing' },
   { name: 'Morning sunlight', icon: 'sunrise', emoji: '☀️', color: '#E9B23F', target: 1, time: 'morning', freq: { type: 'daily' }, identity: 'starts the day with energy', stack: 'make my tea', tiny: 'Step outside for one minute' },
@@ -138,6 +138,16 @@ const countOf = (h, k) => { const v = getV(h, k); return typeof v === 'number' ?
 const isDone = (h, k) => countOf(h, k) >= h.target;
 const isSkip = (h, k) => getV(h, k) === 'skip';
 const isWeekly = h => h.freq.type === 'weekly';
+const goalOf = h => h.goal || (h.target > 1 ? 'count' : 'check');
+const isTimed = h => goalOf(h) === 'time';
+// Minutes logged so far, including a timer that is running right now
+function liveCount(h, k) {
+  const t = S.timer;
+  if (t && t.id === h.id && t.k === k) return t.base + (t.running ? (Date.now() - t.start) / 60000 : 0);
+  return countOf(h, k);
+}
+const fmtClock = min => { const sec = Math.max(0, Math.ceil(min * 60 - 0.001)); return `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`; };
+const fmtMins = m => m < 1 && m > 0 ? `${Math.round(m * 60)}s` : `${Math.floor(m)}`;
 function scheduled(h, k) {
   if (k < h.created) return false;
   if (h.freq.type === 'days') return h.freq.days.includes(dow(k));
@@ -254,6 +264,8 @@ const strengthLabel = s => s < .15 ? 'Seedling' : s < .4 ? 'Sprouting' : s < .7 
 /* ================= Mutations ================= */
 function check(id, k = UI.date) {
   const h = byId(id); if (!h || k > today()) return;
+  if (isTimed(h) && !isDone(h, k)) { openTimer(id); return; }
+  if (isTimed(h) && S.timer && S.timer.id === id) timerStop(false);
   const L = logOf(h), before = dayProgress(k), v = L[k];
   const c = typeof v === 'number' ? v : 0;
   if (c >= h.target) delete L[k];
@@ -306,6 +318,7 @@ function toggleCell(id, k) {
 function addHabit(t) {
   const h = {
     id: uid(), name: t.name.trim(), icon: t.icon || '', emoji: t.emoji || '⭐', color: t.color || COLORS[1],
+    goal: t.goal || ((t.target | 0) > 1 ? 'count' : 'check'),
     target: Math.max(1, t.target | 0 || 1), unit: (t.unit || '').trim(),
     time: t.time || 'anytime',
     freq: t.freq.type === 'days' ? { type: 'days', days: [...t.freq.days] }
@@ -401,7 +414,7 @@ function widgetPayload() {
     return {
       id: h.id, name: h.name, emoji: h.emoji, icon: widgetIcon(h), color: h.color, target: h.target, unit: h.unit, time: h.time,
       freq: h.freq, created: h.created, stack: h.stack, tiny: h.tiny, remind: h.remind || '',
-      count: countOf(h, t), skip: isSkip(h, t),
+      goal: goalOf(h), count: isTimed(h) ? Math.floor(countOf(h, t)) : countOf(h, t), skip: isSkip(h, t),
       weekDone: weekly ? weekCount(h, t) - (done ? 1 : 0) : 0,
       streakBase: weekly ? streak(h) : streak(h) - (done && scheduled(h, t) ? 1 : 0),
     };
@@ -437,7 +450,8 @@ function emberSyncFromNative() {
   for (const a of acts) {
     const h = byId(a.id); if (!h || !a.date || a.date > today()) continue;
     const L = logOf(h), v = L[a.date], c = typeof v === 'number' ? v : 0;
-    if (c >= h.target) delete L[a.date]; else L[a.date] = h.target > 1 ? c + 1 : 1;
+    if (c >= h.target) delete L[a.date]; else L[a.date] = isTimed(h) ? h.target : h.target > 1 ? c + 1 : 1;
+    if (S.timer && S.timer.id === h.id) { S.timer = null; nativeTimerStop(h.id); }
   }
   save();
   if (document.getElementById('view').childElementCount) render();
@@ -452,24 +466,32 @@ function habitCard(h, k) {
   if (st > 0) meta.push(`<span class="streak">${ic('flame', 'xs')}${st}${isWeekly(h) ? 'w' : ''}</span>`);
   if (skip) meta.push('<span>Rest day</span>');
   else if (isWeekly(h)) meta.push(`<span>${weekCount(h, k)} of ${h.freq.times} this week</span>`);
+  else if (isTimed(h)) {
+    const run = S.timer && S.timer.id === h.id && S.timer.k === k;
+    meta.push(run && S.timer.running ? `<span class="live"><i class="live-dot"></i><span data-tm="${h.id}">${fmtClock(h.target - liveCount(h, k))} left</span></span>`
+      : `<span>${done ? h.target : fmtMins(liveCount(h, k))} of ${h.target} min${run ? ' · paused' : ''}</span>`);
+  }
   else if (h.target > 1) meta.push(`<span>${c} of ${h.target}${h.unit ? ' ' + esc(h.unit) : ''}</span>`);
-  if (!skip && !done && h.stack && !isWeekly(h) && h.target <= 1) meta.push(`<span class="ell">After I ${esc(h.stack)}</span>`);
+  if (!skip && !done && h.stack && !isWeekly(h) && h.target <= 1 && !isTimed(h)) meta.push(`<span class="ell">After I ${esc(h.stack)}</span>`);
   else if (!skip && !done && !st && h.tiny && h.target <= 1 && !isWeekly(h)) meta.push(`<span class="ell">Start tiny: ${esc(h.tiny)}</span>`);
   if (NATIVE && h.remind && !done && !skip) meta.push(`<span class="ell" style="display:inline-flex;align-items:center;gap:3px">${ic('bell', 'xs')}${fmtTime(h.remind)}</span>`);
   if (!meta.length) meta.push(`<span>${done ? 'Completed' : freqText(h)}</span>`);
-  const counter = h.target > 1 && !done;
-  const btn = counter
-    ? `<span class="cnt">${c}</span><span class="mini">${ring(Math.min(1, c / h.target), 40, 2.5, h.color, null, { noAnim: true })}</span>`
-    : ic('check');
+  const timed = isTimed(h);
+  const counter = (h.target > 1 || timed) && !done;
+  const lc = timed ? liveCount(h, k) : c, lp = Math.min(1, lc / h.target);
+  const running = timed && S.timer && S.timer.id === h.id && S.timer.k === k && S.timer.running;
+  const btn = !counter ? ic('check')
+    : timed ? `${running ? `<span class="cnt tl" data-tl="${h.id}">${fmtClock(h.target - lc)}</span>` : `<span class="play">${ic('play', 'sm')}</span>`}<span class="mini">${tring(h.id, lp, 40, 2.5, h.color)}</span>`
+    : `<span class="cnt">${c}</span><span class="mini">${ring(Math.min(1, c / h.target), 40, 2.5, h.color, null, { noAnim: true })}</span>`;
   return `<div class="habit ${done ? 'is-done' : ''} ${skip ? 'is-skip' : ''} ${UI.justDone === h.id ? 'pop' : ''}"
       style="--c:${h.color}" data-action="open" data-id="${h.id}" role="button" tabindex="0">
     ${tile(h)}
     <div class="h-body">
       <div class="h-name">${esc(h.name)}</div>
       <div class="h-meta">${meta.join('<i class="dot"></i>')}</div>
-      ${counter && !skip ? `<div class="h-bar"><i style="width:${Math.min(100, c / h.target * 100)}%"></i></div>` : ''}
+      ${counter && !skip ? `<div class="h-bar"><i ${timed ? `data-tp="${h.id}"` : ''} style="width:${(lp * 100).toFixed(1)}%"></i></div>` : ''}
     </div>
-    <button class="h-check ${counter ? 'counter' : ''}" data-action="check" data-id="${h.id}" aria-label="${done ? 'Undo' : 'Complete'} ${esc(h.name)}">${btn}</button>
+    <button class="h-check ${counter ? 'counter' : ''}" data-action="check" data-id="${h.id}" aria-label="${done ? 'Undo' : timed ? 'Start timer for' : 'Complete'} ${esc(h.name)}">${btn}</button>
   </div>`;
 }
 
@@ -810,6 +832,7 @@ function openSheet(html, kind, data) {
   animateRings(wrap);
 }
 function closeSheet(fromPop) {
+  keepAwake(false);
   const root = document.getElementById('sheet-root');
   const wrap = root.querySelector('.sheet-wrap');
   if (!wrap) return;
@@ -858,7 +881,10 @@ function habitSheet(h) {
   if (h.remind && NATIVE) why.push(`<div class="li">${ic('bell', 'sm')}<div><small>Reminder</small>Every scheduled day at ${fmtTime(h.remind)}</div></div>`);
   const c = countOf(h, k), skip = isSkip(h, k), done = isDone(h, k);
   const dayLbl = k === t ? 'today' : fmtDate(k);
-  const ctl = h.target > 1
+  const ctl = isTimed(h)
+    ? (done ? `<button class="btn" style="flex:1" data-action="check" data-id="${h.id}">${ic('check', 'sm')}${h.target} min · completed</button>`
+      : `<button class="btn primary" style="flex:1" data-action="timer" data-id="${h.id}">${ic('play', 'sm')}${c > 0 ? `Continue · ${fmtMins(c)}/${h.target} min` : `Start ${h.target}-min timer`}</button>`)
+    : h.target > 1
     ? `<div class="stepper"><button data-action="dec" data-id="${h.id}" aria-label="Decrease">${ic('chevron-left', 'sm')}</button><span class="sv">${c}<small> / ${h.target}${h.unit ? ' ' + esc(h.unit) : ''}</small></span><button data-action="inc" data-id="${h.id}" aria-label="Increase">${ic('plus', 'sm')}</button></div>`
     : `<button class="btn ${done ? '' : 'primary'}" style="flex:1" data-action="check" data-id="${h.id}">${done ? `${ic('check', 'sm')}Completed ${dayLbl}` : `Mark done ${k === t ? 'today' : `· ${dayLbl}`}`}</button>`;
   const cell = k2 => {
@@ -906,6 +932,7 @@ function draftFrom(src) {
     emoji: src.emoji || Object.keys(EMOJI_ICON).find(e => EMOJI_ICON[e] === src.icon) || '⭐',
     style: src.icon || !src.id ? 'icon' : 'emoji', remind: src.remind || '',
     color: src.color || COLORS[1],
+    goal: src.goal || ((src.target || 1) > 1 ? 'count' : 'check'),
     target: src.target || 1, unit: src.unit || '', time: src.time || 'anytime',
     freq: { type: src.freq?.type || 'daily', days: src.freq?.days ? [...src.freq.days] : [1, 2, 3, 4, 5], times: src.freq?.times || 3 },
     identity: src.identity || '', stack: src.stack || '', tiny: src.tiny || '',
@@ -936,8 +963,12 @@ function editorHtml() {
         : EMOJIS.map(e => `<button class="emo ${e === D.emoji ? 'on' : ''}" data-action="e-emoji" data-v="${e}">${e}</button>`).join('')}</div></div>
     <div class="field"><label>Colour</label><div class="colors">${COLORS.map(c => `<button class="${c === D.color ? 'on' : ''}" style="--sw:${c}" data-action="e-color" data-v="${c}" aria-label="Colour ${c}"></button>`).join('')}</div></div>
     <div class="field"><label>Goal</label>
-      <div class="seg"><button class="${D.target <= 1 ? 'on' : ''}" data-action="e-goal" data-v="check">Complete once</button><button class="${D.target > 1 ? 'on' : ''}" data-action="e-goal" data-v="count">Reach a number</button></div>
-      ${D.target > 1 ? `<div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+      <div class="seg"><button class="${D.goal === 'check' ? 'on' : ''}" data-action="e-goal" data-v="check">Once</button><button class="${D.goal === 'count' ? 'on' : ''}" data-action="e-goal" data-v="count">Number</button><button class="${D.goal === 'time' ? 'on' : ''}" data-action="e-goal" data-v="time">${ic('timer', 'sm')}Timed</button></div>
+      ${D.goal === 'time' ? `<div style="display:flex;gap:12px;margin-top:10px;align-items:center">
+        <div class="stepper"><button data-action="e-mins" data-d="-1" aria-label="Fewer minutes">${ic('chevron-left', 'sm')}</button><span class="sv">${D.target}<small> min</small></span><button data-action="e-mins" data-d="1" aria-label="More minutes">${ic('plus', 'sm')}</button></div>
+        <span class="t-cap">Completes when the timer finishes</span></div>
+        <div class="chips" style="margin-top:10px">${[5, 10, 15, 20, 30, 45, 60].map(m => `<button class="chip ${D.target === m ? 'on' : ''}" data-action="e-minset" data-v="${m}">${m} min</button>`).join('')}</div>` : ''}
+      ${D.goal === 'count' ? `<div style="display:flex;gap:8px;margin-top:10px;align-items:center">
         <div class="stepper"><button data-action="e-target" data-d="-1" aria-label="Decrease">${ic('chevron-left', 'sm')}</button><span class="sv">${D.target}</span><button data-action="e-target" data-d="1" aria-label="Increase">${ic('plus', 'sm')}</button></div>
         <input class="input" data-f="unit" value="${esc(D.unit)}" placeholder="Unit — glasses, pages…" maxlength="16" style="flex:1"></div>` : ''}
     </div>
@@ -966,13 +997,15 @@ function saveDraft() {
   const name = D.name.trim();
   if (!name) { toast('Give your habit a name'); const el = document.getElementById('e-name'); el && el.focus(); return; }
   if (D.freq.type === 'days' && !D.freq.days.length) { toast('Pick at least one day'); return; }
+  if (D.goal === 'time') D.unit = 'min';
+  if (D.goal === 'check') D.target = 1;
   const freq = D.freq.type === 'days' ? { type: 'days', days: [...D.freq.days].sort() } : D.freq.type === 'weekly' ? { type: 'weekly', times: D.freq.times } : { type: 'daily' };
   let h;
   const icon = D.style === 'icon' ? D.icon : '';
   if (D.isNew) { h = addHabit({ ...D, icon, freq }); }
   else {
     h = byId(D.id); if (!h) return;
-    Object.assign(h, { name, icon, emoji: D.emoji, remind: D.remind, color: D.color, target: Math.max(1, D.target), unit: D.unit.trim(), time: D.time, freq, identity: D.identity.trim(), stack: D.stack.trim(), tiny: D.tiny.trim() });
+    Object.assign(h, { name, icon, emoji: D.emoji, remind: D.remind, color: D.color, goal: D.goal, target: Math.max(1, D.target), unit: D.unit.trim(), time: D.time, freq, identity: D.identity.trim(), stack: D.stack.trim(), tiny: D.tiny.trim() });
   }
   save();
   const wasNew = D.isNew; D = null;
@@ -981,6 +1014,149 @@ function saveDraft() {
     toast(`${h.name} added — start tiny`);
   } else { render(); openHabit(h.id); toast('Changes saved'); }
 }
+
+/* ================= Timer ================= */
+function tring(id, pct, size, stroke, color) {
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  return `<svg class="ring" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
+    <circle class="ring-bg" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}"/>
+    <circle class="ring-fg t" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}" style="stroke:${color}"
+      stroke-dasharray="${c}" stroke-dashoffset="${c * (1 - pct)}" transform="rotate(-90 ${size / 2} ${size / 2})" data-tr="${id}" data-c="${c}"/>
+  </svg>`;
+}
+function openTimer(id) {
+  const h = byId(id); if (!h) return;
+  if (UI.date > today()) return;
+  openSheet(timerSheet(h), 'timer', id);
+  keepAwake(!!(S.timer && S.timer.id === id && S.timer.running));
+}
+function refreshTimer() {
+  if (!UI.sheet || UI.sheet.kind !== 'timer') return;
+  const h = byId(UI.sheet.data), wrap = document.querySelector('.sheet-wrap');
+  if (h && wrap) wrap.querySelector('.sheet-body').innerHTML = timerSheet(h);
+}
+function timerSheet(h) {
+  const t = S.timer, mine = t && t.id === h.id;
+  const k = mine ? t.k : UI.date;
+  const v = liveCount(h, k), pct = Math.min(1, v / h.target), done = isDone(h, k) && !mine;
+  const running = mine && t.running;
+  const st = streak(h);
+  const center = done
+    ? `<div class="t-done">${ic('check')}</div><div class="tsub">${h.target} min complete${st > 1 ? ` · 🔥 ${st}-day streak` : ''}</div>`
+    : `<div class="tclock" data-tl="${h.id}">${fmtClock(h.target - v)}</div><div class="tsub">${running ? 'remaining' : v > 0 ? 'paused' : `${h.target} minute${h.target > 1 ? 's' : ''}`}</div>`;
+  const hint = h.tiny && !done ? `<p class="t-hint">${ic('feather', 'xs')}Short on time? “${esc(h.tiny)}” still counts.</p>` : '';
+  return `<div class="timer" style="--c:${h.color}">
+    <div class="d-head">${tile(h)}<div class="dh-body"><h2>${esc(h.name)}</h2><p>${k === today() ? 'Today' : fmtDate(k)} · ${h.target}-minute session</p></div>
+      <button class="icon-btn" data-action="close-sheet" aria-label="Close">${ic('x', 'sm')}</button></div>
+    <div class="t-ring ${running ? 'is-running' : ''} ${done ? 'is-done' : ''}">${tring(h.id, done ? 1 : pct, 248, 12, h.color)}<div class="t-center">${center}</div></div>
+    ${done ? `<div class="t-ctl"><button class="btn" data-action="t-again">${ic('rotate-ccw', 'sm')}Go again</button><button class="btn primary" data-action="close-sheet">Close</button></div>`
+      : `<div class="t-ctl">
+        <button class="t-btn" data-action="t-reset" aria-label="Reset" ${v > 0 ? '' : 'disabled'}>${ic('rotate-ccw')}</button>
+        <button class="t-btn main" data-action="t-toggle" aria-label="${running ? 'Pause' : 'Start'}">${ic(running ? 'pause' : 'play', 'lg')}</button>
+        <button class="t-btn" data-action="t-done" aria-label="Mark complete">${ic('check')}</button>
+      </div>
+      <p class="t-cap">${running ? (NATIVE ? 'You can leave the app — Ember will ping you when time’s up.' : 'Keep this tab open — Ember will chime when time’s up.') : v > 0 ? `${fmtMins(v)} of ${h.target} min done · tap play to continue` : 'Tap play to start. Check marks it done early.'}</p>`}
+    ${hint}
+  </div>`;
+}
+function timerStart(id) {
+  const h = byId(id); if (!h) return;
+  const k = UI.date; if (k > today()) return;
+  if (S.timer && S.timer.id !== id) timerStop(true);
+  unlockAudio();
+  const base = S.timer && S.timer.id === id ? liveCount(h, S.timer.k) : (isDone(h, k) ? 0 : countOf(h, k));
+  S.timer = { id, k: S.timer && S.timer.id === id ? S.timer.k : k, base, start: Date.now(), running: true };
+  save(); buzz(15);
+  nativeTimerStart(h, Date.now() + (h.target - base) * 60000);
+  keepAwake(true); tick(); render(); refreshTimer();
+}
+function timerPause() {
+  const t = S.timer; if (!t || !t.running) return;
+  const h = byId(t.id); const v = liveCount(h, t.k);
+  logMin(h, t.k, v); t.base = v; t.running = false; save();
+  nativeTimerStop(t.id); keepAwake(false); buzz(10); render(); refreshTimer();
+}
+// Stop the active timer, keeping the minutes done so far (or discarding them)
+function timerStop(keep) {
+  const t = S.timer; if (!t) return;
+  const h = byId(t.id);
+  if (h && keep) logMin(h, t.k, liveCount(h, t.k));
+  S.timer = null; save(); nativeTimerStop(t.id); keepAwake(false);
+}
+function timerReset(id) {
+  const h = byId(id); if (!h) return;
+  const k = S.timer && S.timer.id === id ? S.timer.k : UI.date;
+  if (S.timer && S.timer.id === id) timerStop(false);
+  logMin(h, k, 0); save(); buzz(10); render(); refreshTimer();
+}
+function timerComplete(id, auto) {
+  const h = byId(id); if (!h) return;
+  const k = S.timer && S.timer.id === id ? S.timer.k : UI.date;
+  const before = dayProgress(k);
+  if (S.timer && S.timer.id === id) { S.timer = null; nativeTimerStop(id); }
+  logMin(h, k, h.target); save();
+  keepAwake(false); UI.justDone = id;
+  if (auto) chime();
+  buzz([40, 70, 40, 70, 90]);
+  render(); refreshTimer(); refreshSheet();
+  const after = dayProgress(k), st = streak(h);
+  setTimeout(() => {
+    confetti(h.color);
+    if (after.due && after.ok === after.due && before.ok < before.due) toast('🎉 Perfect day — every promise kept!');
+    else toast(`⏱️ ${h.target} min of ${h.name.toLowerCase()} — done!${st > 1 ? ` 🔥 ${st}-day streak` : ''}`);
+  }, 200);
+}
+function logMin(h, k, v) {
+  const L = logOf(h);
+  if (v <= 0) delete L[k]; else L[k] = Math.min(h.target * 3, Math.round(v * 100) / 100);
+  if (k < h.created && L[k]) h.created = k;
+}
+// One shared ticker updates every live clock/ring and finishes the timer on time
+function tick() {
+  if (UI.ticker) return;
+  UI.ticker = setInterval(() => {
+    const t = S.timer;
+    if (!t || !t.running) { clearInterval(UI.ticker); UI.ticker = null; return; }
+    const h = byId(t.id); if (!h) { S.timer = null; save(); return; }
+    const v = liveCount(h, t.k), rem = h.target - v, pct = Math.min(1, v / h.target);
+    if (rem <= 0) { timerComplete(h.id, true); return; }
+    document.querySelectorAll(`[data-tl="${h.id}"]`).forEach(el => { el.textContent = fmtClock(rem); });
+    document.querySelectorAll(`[data-tm="${h.id}"]`).forEach(el => { el.textContent = `${fmtClock(rem)} left`; });
+    document.querySelectorAll(`[data-tp="${h.id}"]`).forEach(el => { el.style.width = (pct * 100).toFixed(1) + '%'; });
+    document.querySelectorAll(`[data-tr="${h.id}"]`).forEach(el => { el.style.strokeDashoffset = +el.dataset.c * (1 - pct); });
+  }, 250);
+}
+// On launch / resume: finish a timer that ran out while the app was closed
+function timerResumeCheck() {
+  const t = S.timer; if (!t) return;
+  const h = byId(t.id);
+  if (!h || isDone(h, t.k) && !t.running) { S.timer = null; save(); return; }
+  if (t.running && liveCount(h, t.k) >= h.target) timerComplete(h.id, false);
+  else if (t.running) tick();
+}
+function nativeTimerStart(h, end) { try { NATIVE && NATIVE.timerStart && NATIVE.timerStart(h.id, end, `${h.name} · ${h.target} min`); } catch (e) { } }
+function nativeTimerStop(id) { try { NATIVE && NATIVE.timerStop && NATIVE.timerStop(id); } catch (e) { } }
+function keepAwake(on) { try { NATIVE && NATIVE.keepAwake && NATIVE.keepAwake(!!on); } catch (e) { } }
+function unlockAudio() {
+  try {
+    const A = window.AudioContext || window.webkitAudioContext;
+    if (!A) return;
+    UI.audio = UI.audio || new A();
+    if (UI.audio.state === 'suspended') UI.audio.resume();
+  } catch (e) { }
+}
+function chime() {
+  try {
+    const a = UI.audio; if (!a) return;
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+      const o = a.createOscillator(), g = a.createGain(), t0 = a.currentTime + i * 0.13;
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(0.2, t0 + 0.02); g.gain.exponentialRampToValueAtTime(0.001, t0 + 0.7);
+      o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0 + 0.75);
+    });
+  } catch (e) { }
+}
+window.emberOpenTimer = id => { if (byId(id)) { UI.tab = 'today'; UI.date = today(); render(); openTimer(id); } };
 
 /* ================= Theme ================= */
 function applyTheme() {
@@ -1135,7 +1311,20 @@ const actions = {
   'e-style': el => { D.style = el.dataset.v; rerenderEditor(); },
   'e-remind': el => { D.remind = el.dataset.v === 'on' ? (D.remind || TIME_DEFAULT[D.time] || '09:00') : ''; if (D.remind) askNotif(); rerenderEditor(); },
   'e-color': el => { D.color = el.dataset.v; rerenderEditor(); },
-  'e-goal': el => { D.target = el.dataset.v === 'count' ? Math.max(2, D.target > 1 ? D.target : 8) : 1; rerenderEditor(); },
+  'e-goal': el => {
+    const g = el.dataset.v, prev = D.goal; D.goal = g;
+    if (g === 'check') D.target = 1;
+    else if (g === 'count') { D.target = prev === 'count' ? D.target : 8; if (D.unit === 'min') D.unit = ''; }
+    else D.target = prev === 'time' ? D.target : 10;
+    rerenderEditor();
+  },
+  'e-mins': el => { D.target = Math.max(1, Math.min(240, D.target + +el.dataset.d)); rerenderEditor(); },
+  'e-minset': el => { D.target = +el.dataset.v; rerenderEditor(); },
+  timer: el => openTimer(el.dataset.id),
+  't-toggle': () => { const t = S.timer, id = UI.sheet && UI.sheet.data; if (t && t.id === id && t.running) timerPause(); else timerStart(id); },
+  't-reset': () => { const id = UI.sheet && UI.sheet.data; timerReset(id); },
+  't-done': () => { const id = UI.sheet && UI.sheet.data; timerComplete(id, false); },
+  't-again': () => { const id = UI.sheet && UI.sheet.data, h = byId(id); if (h) { delete logOf(h)[UI.date]; save(); render(); timerStart(id); } },
   'e-target': el => { D.target = Math.max(2, Math.min(999, D.target + +el.dataset.d)); rerenderEditor(); },
   'e-freq': el => { D.freq.type = el.dataset.v; rerenderEditor(); },
   'e-day': el => { const d = +el.dataset.v; const s = new Set(D.freq.days); s.has(d) ? s.delete(d) : s.add(d); D.freq.days = [...s]; rerenderEditor(); },
@@ -1174,7 +1363,7 @@ function checkRollover() {
   const t = today();
   if (t !== lastDay) { if (UI.date === lastDay) UI.date = t; lastDay = t; render(); }
 }
-document.addEventListener('visibilitychange', () => { if (!document.hidden) checkRollover(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkRollover(); timerResumeCheck(); } });
 setInterval(checkRollover, 60 * 1000);
 
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); UI.installEvt = e; if (S.onboarded) render(); });
@@ -1212,9 +1401,10 @@ window.emberBack = function () {
   if (UI.date !== today()) { UI.date = today(); render(); return true; }
   return false;
 };
-window.checkRollover = () => { checkRollover(); checkNotif(); };
+window.checkRollover = () => { checkRollover(); checkNotif(); timerResumeCheck(); };
 window.toast = toast;
 
 emberSyncFromNative();
 render();
+timerResumeCheck();
 syncReminder();

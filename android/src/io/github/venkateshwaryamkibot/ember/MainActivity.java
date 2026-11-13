@@ -31,6 +31,8 @@ public class MainActivity extends Activity {
     private static final int REQ_NOTIF = 13;
 
     private WebView web;
+    private String pendingTimer;
+    private boolean pageReady;
     private ValueCallback<Uri[]> fileCallback;
     private String pendingBackup;
 
@@ -52,7 +54,14 @@ public class MainActivity extends Activity {
         s.setMediaPlaybackRequiresUserGesture(true);
 
         web.addJavascriptInterface(new Bridge(), "EmberAndroid");
+        pendingTimer = getIntent() == null ? null : getIntent().getStringExtra(ReminderReceiver.EXTRA_TIMER);
         web.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                pageReady = true;
+                flushTimer();
+            }
+
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
                 Uri u = Uri.parse(url);
@@ -87,6 +96,20 @@ public class MainActivity extends Activity {
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
         web.saveState(out);
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        String id = intent == null ? null : intent.getStringExtra(ReminderReceiver.EXTRA_TIMER);
+        if (id != null) { pendingTimer = id; if (pageReady) flushTimer(); }
+    }
+
+    /** A "Start timer" notification button opened the app: show that habit's timer. */
+    private void flushTimer() {
+        if (pendingTimer == null) return;
+        js("window.emberOpenTimer && window.emberOpenTimer(" + quote(pendingTimer) + ")");
+        pendingTimer = null;
     }
 
     @Override
@@ -293,6 +316,29 @@ public class MainActivity extends Activity {
                                 Uri.parse("package:" + getPackageName()));
                     }
                     try { startActivity(i); } catch (Exception ignored) { }
+                }
+            });
+        }
+
+        /** A habit timer started: live countdown notification + alarm when it ends. */
+        @JavascriptInterface
+        public void timerStart(String id, double endMs, String title) {
+            ReminderReceiver.timerStart(MainActivity.this, id, (long) endMs, title);
+        }
+
+        @JavascriptInterface
+        public void timerStop(String id) {
+            ReminderReceiver.timerStop(MainActivity.this, id);
+        }
+
+        /** Keep the screen on while the timer screen is open and running. */
+        @JavascriptInterface
+        public void keepAwake(final boolean on) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    if (on) getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    else getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 }
             });
         }

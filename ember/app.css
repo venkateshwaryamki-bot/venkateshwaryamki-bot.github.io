@@ -491,3 +491,35 @@ body.no-tabs #toast { bottom: calc(var(--safe-b) + 24px); }
 @media (min-width: 600px) {
   .sheet { border-radius: 28px; bottom: 16px; border: 1px solid var(--line-2); }
 }
+
+/* ============ Timed habits ============ */
+.seg button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.seg button .i { width: 15px; height: 15px; }
+.h-check .play { color: var(--c); display: grid; place-items: center; margin-left: 2px; }
+.h-check .play .i { width: 17px; height: 17px; fill: color-mix(in srgb, var(--c) 25%, transparent); }
+.h-check .cnt.tl { font-size: 10.5px; letter-spacing: -.02em; }
+.h-meta .live { display: inline-flex; align-items: center; gap: 6px; color: var(--c); font-weight: 650; }
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c); animation: livePulse 1.4s ease-in-out infinite; }
+@keyframes livePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.75); } }
+.ring-fg.t { transition: stroke-dashoffset .3s linear; }
+
+.timer .d-head { margin-bottom: 8px; }
+.t-ring { position: relative; width: 248px; height: 248px; margin: 18px auto 8px; }
+.t-ring .ring-bg { stroke: var(--surface-2); }
+.t-ring::before { content: ""; position: absolute; inset: 22px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--c) 10%, transparent), transparent 70%); opacity: 0; transition: opacity .4s; }
+.t-ring.is-running::before { opacity: 1; animation: breathe 4s ease-in-out infinite; }
+@keyframes breathe { 0%, 100% { transform: scale(.92); } 50% { transform: scale(1.04); } }
+.t-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.tclock { font-size: 54px; font-weight: 700; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.tsub { margin-top: 8px; font-size: 13px; color: var(--text-2); font-weight: 600; }
+.t-done { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; background: var(--c); color: #fff; animation: pop .5s var(--spring); }
+.t-done .i { width: 38px; height: 38px; stroke-width: 2.6; }
+.t-ctl { display: flex; align-items: center; justify-content: center; gap: 22px; margin-top: 14px; }
+.t-ctl .btn { flex: 1; }
+.t-btn { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line-2); color: var(--text); transition: transform .15s var(--ease); }
+.t-btn:active { transform: scale(.9); }
+.t-btn:disabled { opacity: .35; }
+.t-btn.main { width: 80px; height: 80px; background: var(--c); border-color: transparent; color: #fff; box-shadow: 0 12px 30px -10px var(--c); }
+.t-btn.main .i { width: 30px; height: 30px; fill: #fff; stroke-width: 1.5; }
+.t-cap { text-align: center; margin-top: 16px; font-size: 13px; color: var(--text-2); line-height: 1.5; }
+.t-hint { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 10px; font-size: 12.5px; color: var(--text-3); text-align: center; }

@@ -40,6 +40,9 @@ public class ReminderReceiver extends BroadcastReceiver {
     static final String A_HABIT = P + "HABIT_REMIND";
     static final String A_DONE = P + "NOTIF_DONE";
     static final String A_SNOOZE = P + "NOTIF_SNOOZE";
+    static final String A_TIMER = P + "TIMER_END";
+    static final String EXTRA_TIMER = "startTimer";
+    private static final String CH_TIMER = "timer";
     private static final String CH_HABITS = "habits";
     private static final String CH_DAILY = "daily";
     private static final int FLAG_IMMUTABLE = 0x04000000;
@@ -55,6 +58,7 @@ public class ReminderReceiver extends BroadcastReceiver {
         else if (A_HABIT.equals(a)) habitReminder(ctx, id, false);
         else if (A_DONE.equals(a)) { done(ctx, id); return; }
         else if (A_SNOOZE.equals(a)) { snooze(ctx, id); return; }
+        else if (A_TIMER.equals(a)) { timerEnd(ctx, id, intent.getStringExtra("title")); return; }
         scheduleAll(ctx); // next day, and after boot / app update
     }
 
@@ -183,8 +187,10 @@ public class ReminderReceiver extends BroadcastReceiver {
         int streak = WidgetData.streak(h);
         String emoji = h.optString("emoji", "✨");
 
+        boolean timed = "time".equals(h.optString("goal"));
         String title;
-        if (count > 0 && target > 1) title = pick("Keep going — " + count + " of " + target + " " + h.optString("unit") + " 💪", lower(name) + ": " + count + "/" + target + " — nearly there! 🚀").trim();
+        if (timed) title = streak >= 2 ? pick("🔥 " + streak + "-day streak — " + target + " min of " + lower(name) + "?", "⏱️ " + target + " minutes to keep your " + streak + "-day streak") : pick("⏱️ " + target + " minutes of " + lower(name) + "?", emoji + " " + name + " · " + target + " min — ready?", "▶️ Time for " + target + " min of " + lower(name));
+        else if (count > 0 && target > 1) title = pick("Keep going — " + count + " of " + target + " " + h.optString("unit") + " 💪", lower(name) + ": " + count + "/" + target + " — nearly there! 🚀").trim();
         else if (streak >= 2) title = pick("🔥 Keep your " + streak + "-day " + lower(name) + " streak alive", "Day " + (streak + 1) + " of " + lower(name) + "? Let's go! 🔥", "🔥 " + streak + " days strong — " + lower(name) + " time");
         else title = pick("⏰ " + name + " time!", emoji + " Ready for " + lower(name) + "?", "✨ Small step: " + lower(name), "👋 Hey! Time to " + lower(name));
 
@@ -205,7 +211,8 @@ public class ReminderReceiver extends BroadcastReceiver {
                 .setContentIntent(openApp(ctx))
                 .setAutoCancel(true)
                 .setOnlyAlertOnce(quiet)
-                .addAction(R.drawable.ic_check, target > 1 ? "+1 " + h.optString("unit", "") : "✅ Done", alarm(ctx, 20000 + (id.hashCode() & 0x7fff), A_DONE, id))
+                .addAction(timed ? R.drawable.ic_play : R.drawable.ic_check, timed ? "▶ Start timer" : target > 1 ? "+1 " + h.optString("unit", "") : "✅ Done",
+                        timed ? openTimer(ctx, id) : alarm(ctx, 20000 + (id.hashCode() & 0x7fff), A_DONE, id))
                 .addAction(R.drawable.ic_alarm, "Snooze " + SNOOZE_MIN + " min", alarm(ctx, 30000 + (id.hashCode() & 0x7fff), A_SNOOZE, id));
         post(ctx, notifId(id), b);
     }
@@ -338,6 +345,63 @@ public class ReminderReceiver extends BroadcastReceiver {
     }
 
     /* ======================= helpers ======================= */
+
+    private static PendingIntent openTimer(Context ctx, String id) {
+        Intent i = new Intent(ctx, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                .putExtra(EXTRA_TIMER, id);
+        return PendingIntent.getActivity(ctx, 60000 + (id.hashCode() & 0x7fff), i, PendingIntent.FLAG_UPDATE_CURRENT | FLAG_IMMUTABLE);
+    }
+
+    /* ======================= habit timers ======================= */
+
+    private static int timerNotif(String id) { return 70000 + (id.hashCode() & 0x7fff); }
+
+    private static PendingIntent timerAlarm(Context ctx, String id, String title) {
+        Intent i = new Intent(ctx, ReminderReceiver.class).setAction(A_TIMER).putExtra("id", id);
+        if (title != null) i.putExtra("title", title);
+        return PendingIntent.getBroadcast(ctx, 50000 + (id.hashCode() & 0x7fff), i, PendingIntent.FLAG_UPDATE_CURRENT | FLAG_IMMUTABLE);
+    }
+
+    static void timerStart(Context ctx, String id, long end, String title) {
+        AlarmManager am = (AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE);
+        PendingIntent pi = timerAlarm(ctx, id, title);
+        boolean exact = true;
+        if (Build.VERSION.SDK_INT >= 31) {
+            try { exact = (Boolean) AlarmManager.class.getMethod("canScheduleExactAlarms").invoke(am); } catch (Exception e) { exact = false; }
+        }
+        if (exact) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, end, pi);
+        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, end, pi);
+
+        // Ongoing countdown in the notification shade
+        Notification.Builder b = builder(ctx, CH_TIMER, "Running timers", 2)
+                .setSmallIcon(R.drawable.ic_stat).setColor(0xFFFF7A3D)
+                .setContentTitle("⏱️ " + title)
+                .setContentText("Running — Ember will ping you when time’s up")
+                .setUsesChronometer(true).setWhen(end).setShowWhen(true)
+                .setOngoing(true).setOnlyAlertOnce(true)
+                .setContentIntent(openTimer(ctx, id));
+        if (Build.VERSION.SDK_INT >= 24) {
+            try { Notification.Builder.class.getMethod("setChronometerCountDown", boolean.class).invoke(b, true); } catch (Exception ignored) { }
+        }
+        post(ctx, timerNotif(id), b);
+    }
+
+    static void timerStop(Context ctx, String id) {
+        ((AlarmManager) ctx.getSystemService(Context.ALARM_SERVICE)).cancel(timerAlarm(ctx, id, null));
+        ((NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE)).cancel(timerNotif(id));
+    }
+
+    private static void timerEnd(Context ctx, String id, String title) {
+        ((NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE)).cancel(timerNotif(id));
+        String what = title == null ? "Your session" : title;
+        Notification.Builder b = builder(ctx, CH_HABITS, "Habit reminders", 4)
+                .setSmallIcon(R.drawable.ic_stat).setColor(0xFFFF7A3D)
+                .setContentTitle(pick("⏰ Time’s up! 🎉", "🎉 Session complete!", "⏰ Done — nicely focused! 🙌"))
+                .setContentText(what + " ✓ — tap to log it and keep your streak 🔥")
+                .setContentIntent(openTimer(ctx, id))
+                .setAutoCancel(true);
+        post(ctx, timerNotif(id) + 1, b);
+    }
 
     private static PendingIntent openApp(Context ctx) {
         Intent open = new Intent(ctx, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
