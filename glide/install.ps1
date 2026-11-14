@@ -1,6 +1,6 @@
 # Glide one-step installer for Windows.
 # Paste into PowerShell:
-#   irm https://raw.githubusercontent.com/venkateshwaryamki-bot/venkateshwaryamki-bot.github.io/ccr-450729e9-7pdmc1/glide/install.ps1 | iex
+#   irm https://raw.githubusercontent.com/venkateshwaryamki-bot/venkateshwaryamki-bot.github.io/main/glide/install.ps1 | iex
 #
 # Downloads Glide into %LOCALAPPDATA%\Glide, adds a "Glide" shortcut to the desktop and starts it.
 # start.bat then installs Python (if missing) and Glide's two libraries on first run.
@@ -9,8 +9,8 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'   # makes downloads much faster in Windows PowerShell
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-$Branch = 'ccr-450729e9-7pdmc1'
-$ZipUrl = "https://github.com/venkateshwaryamki-bot/venkateshwaryamki-bot.github.io/archive/refs/heads/$Branch.zip"
+$Repo = 'https://github.com/venkateshwaryamki-bot/venkateshwaryamki-bot.github.io/archive/refs/heads'
+$ZipUrls = @("$Repo/main.zip", "$Repo/ccr-450729e9-7pdmc1.zip")   # main first; the second is only a fallback
 $Dest   = Join-Path $env:LOCALAPPDATA 'Glide'
 
 function Step($msg) { Write-Host "  > $msg" -ForegroundColor Cyan }
@@ -23,13 +23,19 @@ try {
     Step "Downloading Glide..."
     $work = Join-Path $env:TEMP ("glide-install-" + [guid]::NewGuid().ToString('N'))
     New-Item -ItemType Directory -Path $work | Out-Null
-    $zip = Join-Path $work 'glide.zip'
-    Invoke-WebRequest -Uri $ZipUrl -OutFile $zip -UseBasicParsing
-
-    Step "Unpacking..."
-    Expand-Archive -Path $zip -DestinationPath $work -Force
-    $src = Get-ChildItem -Path $work -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'glide\glide.py') } | Select-Object -First 1
-    if (-not $src) { throw "The download didn't contain the glide folder." }
+    $src = $null
+    foreach ($url in $ZipUrls) {
+        try {
+            $zip = Join-Path $work 'glide.zip'
+            Invoke-WebRequest -Uri $url -OutFile $zip -UseBasicParsing
+            Expand-Archive -Path $zip -DestinationPath $work -Force
+            Remove-Item $zip -Force
+            $src = Get-ChildItem -Path $work -Directory | Where-Object { Test-Path (Join-Path $_.FullName 'glide\glide.py') } | Select-Object -First 1
+            if ($src) { break }
+        } catch { }
+    }
+    if (-not $src) { throw "Couldn't download Glide." }
+    Step "Unpacked."
 
     Step "Installing to $Dest ..."
     New-Item -ItemType Directory -Path $Dest -Force | Out-Null

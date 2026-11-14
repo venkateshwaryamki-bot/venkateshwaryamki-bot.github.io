@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Step-by-step setup for Glide: laptop, phone, USB-C cable and troubleshooting.">
+<link rel="icon" href="static/icon.svg" type="image/svg+xml">
+<title>Glide Installation Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column with a sticky part index on wide screens; parts flow laptop -> phone -> cable -> fixes. */
+:root {
+  --bg: #0c0c12; --surface: #15151e; --surface-2: #1c1c28; --line: #282838;
+  --fg: #ecebf5; --muted: #9c9bb2; --accent: #ad9fff; --accent-2: #5fd6e8;
+  --ok: #5ee6a0; --warn: #ffc46b; --code-bg: #0f0f17;
+  --display: "Manrope", "Segoe UI", system-ui, sans-serif;
+  --body: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) {
+  --bg: #f6f6fa; --surface: #ffffff; --surface-2: #efeff6; --line: #e0dfeb;
+  --fg: #17161f; --muted: #5c5b70; --accent: #6650e6; --accent-2: #0b8597;
+  --ok: #0f7a4a; --warn: #9a5b00; --code-bg: #f1f0f8; color-scheme: light; } }
+:root[data-theme="light"] {
+  --bg: #f6f6fa; --surface: #ffffff; --surface-2: #efeff6; --line: #e0dfeb;
+  --fg: #17161f; --muted: #5c5b70; --accent: #6650e6; --accent-2: #0b8597;
+  --ok: #0f7a4a; --warn: #9a5b00; --code-bg: #f1f0f8; color-scheme: light; }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.65 var(--body); -webkit-font-smoothing: antialiased; }
+.wrap {
+  max-width: 1140px; margin: 0 auto; padding-block: 40px 80px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 56px;
+}
+@media (max-width: 960px) { .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; padding-block: 24px 64px; } .toc { display: none; } }
+
+/* index */
+.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 32px); align-self: start; font-size: 14px; }
+.toc p { font: 700 11px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 8px 0 14px; }
+.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; counter-reset: t; }
+.toc a { display: flex; gap: 10px; padding: 7px 10px; border-radius: 8px; color: var(--muted); text-decoration: none; }
+.toc a:hover, .toc a:focus-visible { background: var(--surface); color: var(--fg); outline: none; }
+.toc a span { font: 500 12px/1.6 var(--mono); color: var(--accent); min-width: 18px; }
+
+main { min-width: 0; max-width: 760px; }
+
+/* header */
+.eyebrow { font: 700 12px/1 var(--display); letter-spacing: .14em; text-transform: uppercase; color: var(--accent-2); margin: 0 0 14px; display: flex; align-items: center; gap: 10px; }
+.eyebrow svg { width: 18px; height: 18px; }
+h1 { font: 800 clamp(34px, 6vw, 52px)/1.05 var(--display); letter-spacing: -.035em; margin: 0 0 16px; text-wrap: balance; }
+.lede { font-size: 18px; color: var(--muted); margin: 0 0 28px; max-width: 62ch; }
+
+/* map of the setup */
+.flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 0 0 18px; }
+@media (max-width: 620px) { .flow { grid-template-columns: minmax(0, 1fr); } }
+.flow div { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.flow b { display: block; font: 700 15px/1.3 var(--display); margin-bottom: 4px; }
+.flow small { color: var(--muted); font-size: 13.5px; line-height: 1.5; display: block; }
+.flow i { font: 500 12px var(--mono); font-style: normal; color: var(--accent); }
+.time { font-size: 14px; color: var(--muted); margin: 0 0 8px; }
+
+/* sections */
+section { padding-top: 56px; scroll-margin-top: 16px; }
+.part { font: 500 13px/1 var(--mono); color: var(--accent); margin: 0 0 10px; }
+h2 { font: 800 30px/1.15 var(--display); letter-spacing: -.025em; margin: 0 0 10px; text-wrap: balance; }
+h3 { font: 700 19px/1.3 var(--display); letter-spacing: -.01em; margin: 30px 0 8px; }
+p { margin: 0 0 14px; max-width: 68ch; }
+.sub { color: var(--muted); margin-bottom: 18px; }
+a { color: var(--accent); text-underline-offset: 3px; }
+strong { font-weight: 600; }
+.path { font-weight: 600; white-space: nowrap; }
+
+/* steps: a real sequence, so numbered */
+.steps { list-style: none; margin: 16px 0 0; padding: 0; counter-reset: s; display: grid; gap: 18px; }
+.steps > li { counter-increment: s; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 14px; }
+.steps > li::before {
+  content: counter(s); width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+  font: 700 13px var(--display); color: var(--accent); background: var(--surface); border: 1px solid var(--line);
+}
+.steps > li > div { min-width: 0; padding-top: 3px; }
+.steps > li > div > p:last-child { margin-bottom: 0; }
+
+/* OS tabs */
+.tabs { display: inline-flex; gap: 4px; padding: 4px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); margin: 6px 0 4px; flex-wrap: wrap; }
+.tabs button {
+  font: 600 14px var(--body); color: var(--muted); background: none; border: 0; padding: 8px 14px; border-radius: 9px; cursor: pointer;
+}
+.tabs button[aria-selected="true"] { background: var(--surface-2); color: var(--fg); box-shadow: inset 0 0 0 1px var(--line); }
+.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[data-os] { display: none; }
+:root:not([data-os-pick]) [data-os~="win"], :root[data-os-pick="win"] [data-os~="win"], :root[data-os-pick="mac"] [data-os~="mac"], :root[data-os-pick="linux"] [data-os~="linux"] { display: block; }
+
+/* code */
+.cmd { position: relative; margin: 10px 0 14px; }
+.cmd pre {
+  margin: 0; padding: 13px 64px 13px 16px; border-radius: 12px; overflow-x: auto;
+  background: var(--code-bg); border: 1px solid var(--line); font: 14px/1.6 var(--mono); color: var(--fg);
+}
+.cmd button {
+  position: absolute; top: 8px; right: 8px; font: 600 12px var(--body); color: var(--muted);
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; padding: 5px 10px; cursor: pointer;
+}
+.cmd button:hover, .cmd button:focus-visible { color: var(--fg); outline: none; border-color: var(--accent); }
+code { font: 0.9em var(--mono); background: var(--code-bg); border: 1px solid var(--line); padding: 1px 6px; border-radius: 6px; overflow-wrap: anywhere; }
+
+/* callouts: border only where it signals state */
+.note { margin: 14px 0; padding: 12px 16px; border-radius: 12px; background: var(--surface); border-left: 3px solid var(--accent-2); font-size: 15px; }
+.note.warn { border-left-color: var(--warn); }
+.note.ok { border-left-color: var(--ok); }
+.note p { margin: 0; }
+.note b { font-weight: 600; }
+
+/* choose-a-path */
+.paths { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 16px 0 6px; }
+@media (max-width: 620px) { .paths { grid-template-columns: minmax(0, 1fr); } }
+.paths a { display: block; text-decoration: none; color: inherit; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+.paths a:hover, .paths a:focus-visible { border-color: var(--accent); outline: none; }
+.paths b { font: 700 16px/1.3 var(--display); display: block; margin-bottom: 4px; }
+.paths small { color: var(--muted); font-size: 14px; display: block; line-height: 1.5; }
+.pill { display: inline-block; font: 700 10.5px/1 var(--display); letter-spacing: .08em; text-transform: uppercase; padding: 4px 7px; border-radius: 6px; margin-left: 6px; vertical-align: 2px; color: var(--bg); background: var(--accent-2); }
+
+/* tables */
+.table { overflow-x: auto; margin: 12px 0 18px; border: 1px solid var(--line); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 15px; min-width: 520px; }
+th, td { text-align: left; padding: 11px 14px; vertical-align: top; border-bottom: 1px solid var(--line); }
+tr:last-child td { border-bottom: 0; }
+th { font: 700 12px var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--surface); }
+td:first-child { font-weight: 600; width: 34%; }
+
+/* requirements */
+.req { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 10px; }
+.req li { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 10px; }
+.req svg { width: 20px; height: 20px; margin-top: 3px; color: var(--ok); }
+
+details { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); margin: 10px 0; }
+summary { cursor: pointer; padding: 13px 16px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "+"; color: var(--muted); font: 500 18px/1 var(--mono); }
+details[open] summary::after { content: "–"; }
+summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 12px; }
+details > div { padding: 0 16px 14px; color: var(--fg); }
+details > div p { margin-bottom: 8px; }
+
+footer { margin-top: 64px; padding-top: 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav class="toc" aria-label="Guide parts">
+    <p>Installation</p>
+    <ol>
+      <li><a href="#before"><span>0</span>Before you start</a></li>
+      <li><a href="#laptop"><span>1</span>Set up the laptop</a></li>
+      <li><a href="#phone"><span>2</span>Set up the phone</a></li>
+      <li><a href="#cable"><span>3</span>Wired: USB-C cable</a></li>
+      <li><a href="#use"><span>4</span>Using Glide</a></li>
+      <li><a href="#fix"><span>5</span>Troubleshooting</a></li>
+      <li><a href="#update"><span>6</span>Update or remove</a></li>
+    </ol>
+  </nav>
+
+  <main>
+    <p class="eyebrow"><a href="./" style="color:inherit;text-decoration:none;display:inline-flex;align-items:center;gap:10px"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5v15.2l4-4 2.9 6.2 2.6-1.2-2.8-6h5.6z" fill="currentColor"/></svg>Glide 1.4</a></p>
+    <h1>Glide Installation Guide</h1>
+    <p class="lede">Everything you need to turn your phone into a trackpad, keyboard and remote for your laptop, from a fresh computer to a working wired connection.</p>
+
+    <div class="flow" role="list">
+      <div role="listitem"><i>Part 1</i><b>Laptop</b><small>Install Python, then start the Glide server.</small></div>
+      <div role="listitem"><i>Part 2</i><b>Phone</b><small>Install the Android app, or use any phone's browser.</small></div>
+      <div role="listitem"><i>Part 3</i><b>Cable (optional)</b><small>Connect over USB-C instead of Wi-Fi.</small></div>
+    </div>
+    <p class="time">About 10 minutes the first time. After that, start Glide on the laptop and open the app.</p>
+
+    <!-- 0 -->
+    <section id="before">
+      <p class="part">Part 0</p>
+      <h2>Before you start</h2>
+      <ul class="req">
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span><strong>A laptop or desktop</strong> running Windows 10/11, macOS 11 or newer, or Linux with an X11 session.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span><strong>A phone.</strong> Android 7 or newer for the Glide app. Any iPhone or Android phone works through the browser.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span><strong>A connection between them:</strong> the same Wi-Fi network, <em>or</em> a USB-C <strong>data</strong> cable. Some cheap cables only charge.</span></li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg><span><strong>Internet once</strong> on the laptop, to download Glide and its two small Python libraries.</span></li>
+      </ul>
+      <div class="note warn"><p><b>HDMI won't work.</b> HDMI only carries video out of the laptop, and phones have no HDMI input, so touches can't travel back over it. Use Wi-Fi or a USB-C cable.</p></div>
+    </section>
+
+    <!-- 1 -->
+    <section id="laptop">
+      <p class="part">Part 1</p>
+      <h2>Set up the laptop</h2>
+      <p class="sub">Pick your laptop's system. The steps below change to match.</p>
+      <div class="tabs" role="tablist" aria-label="Laptop operating system">
+        <button role="tab" id="tab-win" data-pick="win" aria-selected="true">Windows</button>
+        <button role="tab" id="tab-mac" data-pick="mac" aria-selected="false">macOS</button>
+        <button role="tab" id="tab-linux" data-pick="linux" aria-selected="false">Linux</button>
+      </div>
+
+      <h3>Install Python</h3>
+      <div data-os="win">
+        <div class="note ok"><p><b>On Windows you can skip this.</b> If Python is missing, <code>start.bat</code> installs it for you. Install it yourself only if start.bat asks you to.</p></div>
+        <ol class="steps">
+          <li><div><p>Go to <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org/downloads</a> and download the latest Python 3 for Windows.</p></div></li>
+          <li><div><p>Run the installer. On the first screen, <strong>tick “Add python.exe to PATH”</strong> before clicking <em>Install Now</em>. This is the step people most often miss.</p></div></li>
+          <li><div><p>Prefer the command line? This does the same thing in PowerShell:</p>
+            <div class="cmd"><pre>winget install Python.Python.3.12</pre><button type="button">Copy</button></div></div></li>
+        </ol>
+      </div>
+      <div data-os="mac">
+        <ol class="steps">
+          <li><div><p>Download the macOS installer from <a href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org/downloads</a> and run it.</p></div></li>
+          <li><div><p>Or, if you use Homebrew:</p>
+            <div class="cmd"><pre>brew install python</pre><button type="button">Copy</button></div></div></li>
+        </ol>
+      </div>
+      <div data-os="linux">
+        <ol class="steps">
+          <li><div><p>Most distributions already ship Python 3. Make sure the virtual-environment module is there too (Ubuntu/Debian):</p>
+            <div class="cmd"><pre>sudo apt install python3 python3-venv</pre><button type="button">Copy</button></div></div></li>
+        </ol>
+      </div>
+
+      <div data-os="win">
+        <h3>Quickest way: one command</h3>
+        <p>This downloads Glide, installs Python if needed, adds a Glide icon to your desktop and starts it.</p>
+        <ol class="steps">
+          <li><div><p>Press the <strong>Windows key</strong>, type <strong>PowerShell</strong> and press <strong>Enter</strong>.</p></div></li>
+          <li><div><p>Copy this line, right-click inside the PowerShell window to paste it, and press <strong>Enter</strong>:</p>
+            <div class="cmd"><pre>irm https://raw.githubusercontent.com/venkateshwaryamki-bot/venkateshwaryamki-bot.github.io/main/glide/install.ps1 | iex</pre><button type="button">Copy</button></div></div></li>
+          <li><div><p>When it says <em>Installed</em>, a Glide window opens. Next time, just double-click the <strong>Glide</strong> icon on your desktop.</p></div></li>
+        </ol>
+        <p class="sub">Prefer to do it by hand? Follow the steps below instead.</p>
+      </div>
+
+      <h3>Download Glide</h3>
+      <ol class="steps">
+        <li><div><p>Download the project as a ZIP:</p>
+          <div class="cmd"><pre>https://github.com/venkateshwaryamki-bot/venkateshwaryamki-bot.github.io/archive/refs/heads/main.zip</pre><button type="button">Copy</button></div></div></li>
+        <li><div><p><strong>Unzip it first.</strong> Right-click the ZIP → <em>Extract All…</em> (Mac: double-click it). Put the result somewhere permanent, such as <code>Documents</code>. Everything you need is in the <code>glide</code> folder inside.</p>
+          <div class="note warn"><p>Don't run anything from inside the ZIP. Windows lets you open a ZIP and double-click files in it, but Glide can't find its files that way.</p></div></div></li>
+      </ol>
+
+      <h3>Start Glide</h3>
+      <div data-os="win">
+        <ol class="steps">
+          <li><div><p>Open the <code>glide</code> folder and double-click <strong>start.bat</strong>. A black window opens. The first time, it may install Python and Glide's libraries, which takes a few minutes. If something goes wrong, the window stays open and says what to do.</p></div></li>
+          <li><div><p>If Windows SmartScreen says “Windows protected your PC”, click <em>More info</em> → <em>Run anyway</em>.</p></div></li>
+          <li><div><p>When <strong>Windows Defender Firewall</strong> asks about Python, tick <strong>Private networks</strong> and click <em>Allow access</em>. Without this, your phone can't reach the laptop.</p></div></li>
+        </ol>
+      </div>
+      <div data-os="mac">
+        <ol class="steps">
+          <li><div><p>In the <code>glide</code> folder, <strong>right-click start.command → Open</strong>, then click <em>Open</em> in the warning. A plain double-click is blocked the first time because the file is downloaded and unsigned.</p></div></li>
+          <li><div><p>If macOS says the file can't be run, open Terminal and run it directly. Drag the <code>glide</code> folder into the Terminal window after typing <code>cd </code> to fill in its path:</p>
+            <div class="cmd"><pre>cd ~/Documents/venkateshwaryamki-bot.github.io-main/glide
+bash start.sh</pre><button type="button">Copy</button></div></div></li>
+          <li><div><p><strong>Allow mouse control.</strong> Open <span class="path">System Settings › Privacy &amp; Security › Accessibility</span> and switch on <strong>Terminal</strong> (use <em>+</em> to add it if it isn't listed). Then close the Glide window and start it again.</p>
+            <div class="note warn"><p>Skip this and everything looks connected, but the pointer won't move. macOS silently ignores the input.</p></div></div></li>
+        </ol>
+      </div>
+      <div data-os="linux">
+        <ol class="steps">
+          <li><div><p>In a terminal, from the <code>glide</code> folder:</p>
+            <div class="cmd"><pre>./start.sh</pre><button type="button">Copy</button></div></div></li>
+          <li><div><p>You need an <strong>X11</strong> session. Wayland blocks programs from moving the pointer. On Ubuntu, pick <em>Ubuntu on Xorg</em> from the gear icon on the login screen.</p></div></li>
+        </ol>
+      </div>
+
+      <div class="note ok"><p><b>It's working when</b> a terminal window shows a QR code and <em>Listening on port 8765</em>, and a <strong>Glide pairing page</strong> opens in your browser with the same QR code. Keep that window open while you use Glide. The first start takes a minute while it installs its libraries.</p></div>
+    </section>
+
+    <!-- 2 -->
+    <section id="phone">
+      <p class="part">Part 2</p>
+      <h2>Set up the phone</h2>
+      <p class="sub">Two ways in. The Android app adds auto-discovery, cable support, sharper haptics and keeps the screen awake. The browser version works on any phone with nothing to install.</p>
+      <div class="paths">
+        <a href="#android"><b>Android app <span class="pill">Recommended</span></b><small>Install Glide.apk once. Finds your laptop by itself and works over a cable.</small></a>
+        <a href="#browser"><b>Phone browser</b><small>iPhone or Android. Scan the QR code and add Glide to your home screen.</small></a>
+      </div>
+
+      <h3 id="android">Android app</h3>
+      <ol class="steps">
+        <li><div><p><strong>Get Glide.apk onto the phone.</strong> It's in the <code>glide</code> folder you downloaded. The easiest ways:</p>
+          <p>• On the phone, open <a href="https://venkateshwaryamki-bot.github.io/glide/">venkateshwaryamki-bot.github.io/glide</a> and tap <strong>Download for Android</strong>.<br>• Or copy <code>Glide.apk</code> over with a cable, Google Drive, or by emailing it to yourself.</p></div></li>
+        <li><div><p>Tap the downloaded file. Android asks to allow installs from that app (Chrome or Files): turn on <strong>Allow from this source</strong>, go back, and tap <strong>Install</strong>.</p></div></li>
+        <li><div><p>If Google Play Protect warns about an unknown app, tap <em>More details</em> → <strong>Install anyway</strong>. Glide is a personal app that isn't on the Play Store, so this is expected.</p></div></li>
+        <li><div><p>Open Glide and tap <strong>Scan QR code</strong>. Allow camera access and point it at the QR code on your laptop. It connects within a second.</p>
+          <p>If the camera won't scan, copy the link under the QR code on the laptop's pairing page and paste it into the box below the scan button.</p></div></li>
+      </ol>
+      <div class="note"><p>You pair once. After that, opening the app reconnects on its own, even if your laptop gets a new Wi-Fi address. Tap the status pill at the top of the trackpad to switch between computers.</p></div>
+
+      <h3 id="browser">Phone browser (iPhone and Android)</h3>
+      <ol class="steps">
+        <li><div><p>Open the phone's camera, point it at the QR code on the laptop, and tap the link that appears. Or type the address shown under the QR code into the browser.</p></div></li>
+        <li><div><p>For a full-screen app icon:</p>
+          <p><strong>iPhone (Safari):</strong> Share → <em>Add to Home Screen</em>.<br><strong>Android (Chrome):</strong> ⋮ menu → <em>Add to Home screen</em>.</p></div></li>
+        <li><div><p>Keep the phone from locking while you work: browsers can't hold the screen awake the way the app does. Set a longer <em>Auto-Lock</em> or <em>Screen timeout</em> in the phone's settings.</p></div></li>
+      </ol>
+    </section>
+
+    <!-- 3 -->
+    <section id="cable">
+      <p class="part">Part 3</p>
+      <h2>Wired: USB-C cable</h2>
+      <p class="sub">Optional. A cable gives you a connection that doesn't depend on Wi-Fi at all. There are two methods. USB debugging is faster; tethering needs no developer settings.</p>
+
+      <h3>Method A: USB debugging (Android, fastest)</h3>
+      <ol class="steps">
+        <li><div><p><strong>Unlock Developer options:</strong> open <span class="path">Settings › About phone</span> and tap <strong>Build number</strong> seven times until it says you're a developer.</p>
+          <details><summary>Where Build number is on Samsung, Xiaomi and others</summary><div>
+            <p><strong>Samsung:</strong> Settings › About phone › Software information › Build number.</p>
+            <p><strong>Xiaomi / Redmi / POCO:</strong> Settings › About phone › tap <em>MIUI / HyperOS version</em> seven times.</p>
+            <p><strong>OnePlus / Oppo / Realme:</strong> Settings › About device › Version › Build number.</p>
+            <p><strong>Pixel / Motorola / Nokia:</strong> Settings › About phone › Build number.</p>
+          </div></details></div></li>
+        <li><div><p>Open <span class="path">Settings › System › Developer options</span> and turn on <strong>USB debugging</strong>.</p></div></li>
+        <li><div><p>Start Glide on the laptop. The first time, it downloads Google's official <code>adb</code> tool (about 7 MB) into the <code>glide</code> folder. It only needs to do this once.</p></div></li>
+        <li><div><p>Plug the phone into the laptop. On the phone, tap <strong>Allow</strong> on “Allow USB debugging?” and tick <em>Always allow from this computer</em>.</p></div></li>
+        <li><div><p>Open the Glide app. It pairs over the cable by itself (no QR code needed) and the status pill shows a <strong>USB</strong> badge. The laptop terminal says <em>USB cable … linked</em>.</p></div></li>
+      </ol>
+      <div class="note"><p>Unplug the cable and the app moves to Wi-Fi by itself. Plug it back in and it switches back to the cable.</p></div>
+      <div class="note warn" data-os="win"><p><b>Windows:</b> if the phone never shows the “Allow USB debugging” prompt, it probably needs its maker's USB driver. Samsung phones need the <em>Samsung Android USB Driver</em>, and Pixels need the <em>Google USB Driver</em>. Install it, unplug the phone, and plug it in again.</p></div>
+      <div class="note" data-os="mac linux"><p>Glide finds an existing <code>adb</code> automatically (Android Studio, Homebrew's <code>android-platform-tools</code>, or one on your PATH) and only downloads its own copy if none is found.</p></div>
+      <p>In a phone browser instead of the app (USB debugging still on), open <code>http://localhost:8765</code> while the cable is plugged in.</p>
+
+      <h3>Method B: USB tethering (no developer settings)</h3>
+      <ol class="steps">
+        <li><div><p>Start Glide on the laptop and plug in the cable.</p></div></li>
+        <li><div><p>On the phone: <span class="path">Settings › Network &amp; internet › Hotspot &amp; tethering</span> → turn on <strong>USB tethering</strong>.</p></div></li>
+        <li><div><p>Open the Glide app. It finds the laptop over the cable network by itself. If you've never paired, scan the QR code once.</p></div></li>
+      </ol>
+      <div class="note warn"><p><b>Watch your data plan.</b> With tethering on, the laptop may use the phone's mobile data for internet. Turn mobile data off on the phone if you don't want that.</p></div>
+      <details><summary>iPhone over a cable</summary><div>
+        <p>Turn on <span class="path">Settings › Personal Hotspot › Allow Others to Join</span>, then connect the cable. On Windows this needs Apple Devices or iTunes installed.</p>
+        <p>Turn the laptop's Wi-Fi off and restart Glide so the QR code uses the cable network, then scan it with the iPhone camera.</p>
+      </div></details>
+    </section>
+
+    <!-- 4 -->
+    <section id="use">
+      <p class="part">Part 4</p>
+      <h2>Using Glide</h2>
+      <div class="table"><table>
+        <thead><tr><th>Do this on the phone</th><th>The laptop gets</th></tr></thead>
+        <tbody>
+          <tr><td>Slide one finger</td><td>Pointer movement. Slow is precise, fast flicks cross the screen.</td></tr>
+          <tr><td>Tap</td><td>Left click. Double-tap for double-click.</td></tr>
+          <tr><td>Two-finger tap</td><td>Right click</td></tr>
+          <tr><td>Three-finger tap</td><td>Middle click</td></tr>
+          <tr><td>Two-finger drag</td><td>Scrolling, with momentum after you let go</td></tr>
+          <tr><td>Pinch</td><td>Zoom in and out</td></tr>
+          <tr><td>Hold, then move</td><td>Drag: select text, move windows and files</td></tr>
+          <tr><td>Three-finger swipe ← / →</td><td>Back / forward</td></tr>
+          <tr><td>Three-finger swipe ↑ / ↓</td><td>Task view / show desktop</td></tr>
+          <tr><td>Strip on the right edge</td><td>One-finger scrolling</td></tr>
+          <tr><td>Left / Right buttons</td><td>Real mouse buttons. Hold one and move with another finger to drag.</td></tr>
+          <tr><td>Volume keys (app, optional)</td><td>Down = left click, Up = right click. Turn on in Settings.</td></tr>
+        </tbody>
+      </table></div>
+      <p>The <strong>keyboard</strong> button at the top opens typing, arrow keys, copy/paste/undo, app switching and media controls. <strong>Settings</strong> has pointer speed, acceleration, scroll speed and direction, haptics and a left-handed layout.</p>
+    </section>
+
+    <!-- 5 -->
+    <section id="fix">
+      <p class="part">Part 5</p>
+      <h2>Troubleshooting</h2>
+      <div class="table"><table>
+        <thead><tr><th>Problem</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>Phone stuck on “Connecting…” or “Can't reach computer”</td><td>Check both devices are on the <strong>same</strong> Wi-Fi (not a guest network, which often blocks devices from seeing each other). On Windows, allow Python through the firewall on Private networks. Turn off any VPN on either device.</td></tr>
+          <tr><td>Connected, but the pointer doesn't move (Mac)</td><td>Give Terminal Accessibility permission (Part 1), then restart Glide.</td></tr>
+          <tr><td>Connected, but the pointer doesn't move (Linux)</td><td>You're on Wayland. Log in with an X11 / Xorg session.</td></tr>
+          <tr><td>“python is not recognized” (Windows)</td><td>Reinstall Python with <strong>Add python.exe to PATH</strong> ticked, then run start.bat again.</td></tr>
+          <tr><td>“Port 8765 is busy”</td><td>Another Glide is still running: close it. Or start on another port with <code>start.bat --port 8766</code> (Mac/Linux: <code>./start.sh --port 8766</code>).</td></tr>
+          <tr><td>QR code won't scan</td><td>Copy the link under the QR code on the laptop's pairing page and paste it into the app, or type it into the phone's browser. Brightening the laptop screen helps too.</td></tr>
+          <tr><td>Laptop doesn't appear in the app's list</td><td>Tap the refresh button. Windows firewall can block discovery even when the QR code works, so pair by QR once. After that the app reconnects on its own.</td></tr>
+          <tr><td>Cable plugged in, nothing happens</td><td>Use a <strong>data</strong> cable (charge-only cables are common). Make sure USB debugging is on and you tapped <em>Allow</em>. On Windows, install the phone maker's USB driver.</td></tr>
+          <tr><td>“Couldn't download adb”</td><td>The laptop was offline or the download was blocked. Install it yourself, then start Glide again: <code>winget install Google.PlatformTools</code> (Windows) or <code>brew install android-platform-tools</code> (Mac).</td></tr>
+          <tr><td>Android app won't install over an old version</td><td>The old copy was signed with a different key. Uninstall Glide from the phone, then install again.</td></tr>
+          <tr><td>Pointer feels too slow or fast</td><td>Settings → Pointer speed and Acceleration. Settings are saved on the phone.</td></tr>
+        </tbody>
+      </table></div>
+    </section>
+
+    <!-- 6 -->
+    <section id="update">
+      <p class="part">Part 6</p>
+      <h2>Update or remove</h2>
+      <h3>Update</h3>
+      <p>Download the latest ZIP and replace the old <code>glide</code> folder. Your pairing is kept, because the key lives in your home folder, not in <code>glide</code>. Install the new <code>Glide.apk</code> over the old one; paired computers carry over.</p>
+      <h3>Unpair every phone</h3>
+      <p>Start Glide once with a new pairing key, then scan the new QR code on the phones you want to keep:</p>
+      <div class="cmd" data-os="win"><pre>start.bat --new-key</pre><button type="button">Copy</button></div>
+      <div class="cmd" data-os="mac linux"><pre>./start.sh --new-key</pre><button type="button">Copy</button></div>
+      <h3>Remove Glide</h3>
+      <p>Delete the <code>glide</code> folder and the hidden <code>.glide</code> folder in your home directory (it holds the pairing key). Uninstall the app from the phone like any other app.</p>
+
+      <h3>All start-up options</h3>
+      <div class="table"><table>
+        <thead><tr><th>Option</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>--port 8766</code></td><td>Listen on another port</td></tr>
+          <tr><td><code>--host 192.168.1.20</code></td><td>Put a specific IP address in the QR code</td></tr>
+          <tr><td><code>--new-key</code></td><td>Make a new pairing key (unpairs all phones)</td></tr>
+          <tr><td><code>--no-browser</code></td><td>Don't open the pairing page</td></tr>
+          <tr><td><code>--no-usb</code></td><td>Turn off USB-cable mode</td></tr>
+          <tr><td><code>--no-adb-download</code></td><td>Never download adb automatically</td></tr>
+          <tr><td><code>--adb PATH</code></td><td>Use a specific adb program</td></tr>
+        </tbody>
+      </table></div>
+      <div class="note"><p><b>Privacy:</b> Glide talks only to devices on your network or cable. Nothing goes to the internet. Only phones with your pairing key can connect, so only scan the QR code on your own devices, and use Glide on networks you trust.</p></div>
+    </section>
+
+    <footer><a href="./">Download page</a> · Glide 1.4 · Laptop server: Python 3.9+ · Android app: Android 7+ · Browser: any modern phone browser</footer>
+  </main>
+</div>
+
+<script>
+(() => {
+  const ua = navigator.userAgent;
+  let pick = /Mac/.test(ua) && !/iPhone|iPad/.test(ua) ? "mac" : /Linux/.test(ua) && !/Android/.test(ua) ? "linux" : "win";
+  try { pick = localStorage.getItem("glide-guide-os") || pick; } catch (e) {}
+  const tabs = [...document.querySelectorAll(".tabs button")];
+  function choose(os) {
+    document.documentElement.setAttribute("data-os-pick", os);
+    for (const t of tabs) t.setAttribute("aria-selected", String(t.dataset.pick === os));
+    try { localStorage.setItem("glide-guide-os", os); } catch (e) {}
+  }
+  tabs.forEach((t, i) => {
+    t.addEventListener("click", () => choose(t.dataset.pick));
+    t.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      const n = tabs[(i + (e.key === "ArrowRight" ? 1 : tabs.length - 1)) % tabs.length];
+      n.focus(); choose(n.dataset.pick);
+    });
+  });
+  choose(pick);
+
+  for (const btn of document.querySelectorAll(".cmd button")) {
+    btn.addEventListener("click", () => {
+      const pre = btn.previousElementSibling;
+      const done = () => { btn.textContent = "Copied"; setTimeout(() => (btn.textContent = "Copy"), 1600); };
+      const select = () => { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = "Selected"; };
+      try { navigator.clipboard.writeText(pre.textContent).then(done, select); } catch (e) { select(); }
+    });
+  }
+})();
+</script>
+
+</body>
+</html>
