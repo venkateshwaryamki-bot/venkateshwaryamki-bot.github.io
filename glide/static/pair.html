@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Glide Pairing</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <style>
+    :root { --bg:#08080d; --text:#eeedf7; --muted:#8e8da6; --line:rgba(255,255,255,.08); color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text);
+      font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    body { display: grid; place-items: center; min-height: 100vh; padding: 32px 16px; overflow-x: hidden; }
+    .glow { position: fixed; width: 60vmax; height: 60vmax; border-radius: 50%; filter: blur(90px); opacity: .22; pointer-events: none; }
+    .g1 { background: #6d4dff; top: -25vmax; left: -15vmax; }
+    .g2 { background: #00b8d9; bottom: -30vmax; right: -20vmax; }
+    main { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 48px; align-items: center; max-width: 860px; width: 100%; }
+    .qr { width: 280px; height: 280px; padding: 22px; border-radius: 28px; background: #fff;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.2), 0 30px 80px -20px rgba(110,90,255,.55), 0 0 120px -20px rgba(0,190,220,.35); }
+    .qr svg { width: 100%; height: 100%; fill: #0b0b14; }
+    .qr.empty { display: grid; place-items: center; text-align: center; color: #333; font-size: 14px; padding: 28px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 20px; letter-spacing: -.01em; }
+    .brand svg { width: 28px; height: 28px; filter: drop-shadow(0 0 10px rgba(150,140,255,.6)); }
+    h1 { font-size: 40px; line-height: 1.08; letter-spacing: -.035em; margin: 18px 0 12px; font-weight: 700; }
+    h1 span { background: linear-gradient(135deg, #b8a6ff, #5fe0f2); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    p.lead { color: var(--muted); margin: 0 0 22px; max-width: 420px; }
+    ol { list-style: none; padding: 0; margin: 0 0 22px; display: grid; gap: 10px; counter-reset: s; }
+    ol li { counter-increment: s; display: flex; gap: 12px; align-items: baseline; color: var(--muted); }
+    ol li::before { content: counter(s); flex: none; width: 24px; height: 24px; border-radius: 8px; display: grid; place-items: center;
+      font-size: 12px; font-weight: 700; color: var(--text); background: rgba(255,255,255,.06); border: 1px solid var(--line); }
+    ol b { color: var(--text); font-weight: 560; }
+    .url { display: flex; gap: 8px; align-items: center; padding: 6px 6px 6px 14px; border-radius: 14px;
+      background: rgba(255,255,255,.04); border: 1px solid var(--line); max-width: 460px; }
+    .url code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 13px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #cfd0ff; }
+    .url button { flex: none; height: 34px; padding: 0 14px; border-radius: 10px; border: 0; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600;
+      color: #0b0b14; background: linear-gradient(135deg, #b8a6ff, #5fe0f2); }
+    .note { color: #5a596e; font-size: 13px; margin-top: 16px; }
+    @media (max-width: 720px) { main { grid-template-columns: 1fr; justify-items: center; text-align: center; gap: 28px; }
+      .qr { width: 240px; height: 240px; } h1 { font-size: 30px; } .brand { justify-content: center; } ol li { text-align: left; } .url { margin: 0 auto; } }
+  </style>
+</head>
+<body>
+  <div class="glow g1"></div><div class="glow g2"></div>
+  <main>
+    <div class="qr" id="qr">{{QR}}</div>
+    <section>
+      <div class="brand">
+        <svg viewBox="0 0 24 24"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#b8a6ff"/><stop offset="1" stop-color="#5fe0f2"/></linearGradient></defs><path d="M6 3.5v15.2l4-4 2.9 6.2 2.6-1.2-2.8-6h5.6z" fill="url(#lg)"/></svg>
+        Glide
+      </div>
+      <h1>Turn your phone into a <span>trackpad</span>.</h1>
+      <p class="lead">{{HOST}} is ready. Scan the code with your phone's camera to start controlling this computer.</p>
+      <ol>
+        <li><span>Join the <b>same Wi-Fi</b> on your phone and this computer.</span></li>
+        <li><span><b>Scan the code</b>, or type the link below into your phone's browser.</span></li>
+        <li><span>On Android, the <b>Glide app</b> (Glide.apk) finds this computer by itself. In a browser, use <b>Add to Home Screen</b>.</span></li>
+      </ol>
+      <div class="url"><code id="url">{{URL}}</code><button id="copy">Copy</button></div>
+      <p class="note">This link contains your private pairing key. Only share it with your own devices.</p>
+    </section>
+  </main>
+  <script>
+    const qr = document.getElementById("qr");
+    if (!qr.querySelector("svg")) { qr.classList.add("empty"); qr.textContent = "Install the qrcode package for a scannable code:  pip install qrcode"; }
+    document.getElementById("copy").onclick = async (e) => {
+      try { await navigator.clipboard.writeText(document.getElementById("url").textContent); e.target.textContent = "Copied"; } catch {}
+    };
+  </script>
+</body>
+</html>
