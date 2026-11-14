@@ -63,6 +63,13 @@ Your laptop may then use the phone's mobile data for internet. Turn mobile data 
 you don't want that. iPhones can do the same with Personal Hotspot over the cable,
 using the browser version.
 
+## Horizontal laptop layout
+
+Turn the phone sideways and Glide becomes one wide trackpad, like a laptop's. Left and
+right click areas are built into its bottom edge and a scroll zone runs along its right edge.
+The Android app opens sideways by default. In a phone browser, Glide asks you to rotate
+the phone. To use Glide upright instead, turn off **Settings › Horizontal laptop layout**.
+
 ## Gestures
 
 | Gesture | Action |
@@ -76,7 +83,7 @@ using the browser version.
 | Press and hold, then move | Drag (select text, move windows/files) |
 | Three-finger swipe ← / → | Browser back / forward |
 | Three-finger swipe ↑ / ↓ | Task view / show desktop |
-| Side strip | Scroll with one finger |
+| Side strip (dotted right edge) | Scroll with one finger |
 | Left / Right buttons | Real press-and-hold buttons. Hold one while moving with another finger to drag. |
 
 The **keyboard** button opens typing, arrow keys, shortcuts (copy, paste, undo, switch app)

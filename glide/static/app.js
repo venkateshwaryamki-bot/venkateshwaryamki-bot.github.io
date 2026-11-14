@@ -15,7 +15,7 @@
   /* ------------------------------------------------------------------ settings */
   const DEFAULTS = {
     speed: 1.6, accel: 0.9, scroll: 1.2,
-    natural: true, inertia: true, tap: true, haptics: true, glow: true, lefty: false, volkeys: false,
+    natural: true, inertia: true, tap: true, haptics: true, glow: true, lefty: false, volkeys: false, horizontal: true,
   };
   const cfg = Object.assign({}, DEFAULTS, store.get("glide.cfg", {}));
   const saveCfg = () => store.set("glide.cfg", cfg);
@@ -728,7 +728,7 @@
                    ["sAccel", "oAccel", "accel", (v) => (v ? `${Math.round(v * 50)}%` : "Off")],
                    ["sScroll", "oScroll", "scroll", (v) => `${v.toFixed(1)}×`]];
   const toggles = [["tNatural", "natural"], ["tInertia", "inertia"], ["tTap", "tap"],
-                   ["tHaptics", "haptics"], ["tGlow", "glow"], ["tLefty", "lefty"], ["tVolume", "volkeys"]];
+                   ["tHaptics", "haptics"], ["tGlow", "glow"], ["tLefty", "lefty"], ["tVolume", "volkeys"], ["tHorizontal", "horizontal"]];
 
   function paintSlider(el) {
     const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
@@ -740,6 +740,7 @@
     }
     for (const [tid, key] of toggles) $(tid).checked = !!cfg[key];
     document.body.classList.toggle("lefty", cfg.lefty);
+    applyOrientation();
   }
   for (const [sid, oid, key, fmt] of sliders) {
     $(sid).addEventListener("input", (e) => {
@@ -750,18 +751,37 @@
     $(tid).addEventListener("change", (e) => {
       cfg[key] = e.target.checked; saveCfg();
       if (key === "lefty") document.body.classList.toggle("lefty", cfg.lefty);
+      if (key === "horizontal") applyOrientation();
       if (key === "volkeys" && NATIVE) window.GlideNative.setVolumeKeys(cfg.volkeys);
       buzz(5);
     });
   }
   $("btnReset").addEventListener("click", () => { Object.assign(cfg, DEFAULTS); saveCfg(); loadUI(); buzz(10); });
 
+  /* ------------------------------------------------------------------ horizontal layout */
+  // The app rotates itself; in a browser we ask the person to turn the phone (and lock
+  // the orientation when full screen allows it).
+  function applyOrientation() {
+    document.body.classList.toggle("want-landscape", !!cfg.horizontal);
+    if (NATIVE && typeof window.GlideNative.setLandscape === "function") {
+      try { window.GlideNative.setLandscape(!!cfg.horizontal); } catch {}
+    }
+  }
+  $("btnKeepPortrait").addEventListener("click", () => {
+    cfg.horizontal = false; saveCfg(); loadUI(); buzz(6);
+  });
+
   const fsBtn = $("btnFullscreen");
   const root = document.documentElement;
   if (NATIVE || (!root.requestFullscreen && !root.webkitRequestFullscreen)) fsBtn.hidden = true;
   fsBtn.addEventListener("click", () => {
     if (document.fullscreenElement) document.exitFullscreen();
-    else (root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: "hide" });
+    else {
+      const req = (root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: "hide" });
+      if (cfg.horizontal && req && req.then) {
+        req.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape")).catch(() => {});
+      }
+    }
     closeSheets();
   });
 

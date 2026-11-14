@@ -3,6 +3,7 @@ package io.github.venkateshwaryamkibot.glide;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.net.Uri;
@@ -224,6 +225,18 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void setVolumeKeys(boolean on) { volumeKeys = on; }
+
+        /** Horizontal laptop layout: hold the screen sideways (either way round), or follow the user. */
+        @JavascriptInterface
+        public void setLandscape(final boolean on) {
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    setRequestedOrientation(on ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                                               : ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
+                }
+            });
+        }
 
         /** USB-cable check: is a computer forwarding Glide to this phone's localhost (adb reverse)? */
         @JavascriptInterface

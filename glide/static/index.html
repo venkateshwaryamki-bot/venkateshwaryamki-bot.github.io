@@ -37,6 +37,7 @@
       </div>
     </header>
 
+    <div class="deck">
     <main class="stage">
       <div class="pad" id="pad">
         <canvas id="fx"></canvas>
@@ -63,6 +64,7 @@
       <button class="mbtn mid" id="btnM" data-btn="m" aria-label="Middle click"><i></i></button>
       <button class="mbtn" id="btnR" data-btn="r"><span>Right</span></button>
     </footer>
+    </div>
   </div>
 
   <!-- Keyboard sheet -->
@@ -122,6 +124,7 @@
       <label class="toggle"><span>Tap to click</span><input type="checkbox" id="tTap" /><i></i></label>
       <label class="toggle"><span>Haptic feedback</span><input type="checkbox" id="tHaptics" /><i></i></label>
       <label class="toggle"><span>Touch glow</span><input type="checkbox" id="tGlow" /><i></i></label>
+      <label class="toggle"><span>Horizontal laptop layout<small>Use the phone sideways, like a laptop trackpad</small></span><input type="checkbox" id="tHorizontal" /><i></i></label>
       <label class="toggle"><span>Left-handed layout</span><input type="checkbox" id="tLefty" /><i></i></label>
       <label class="toggle native-only"><span>Volume keys click<small>Down = left · Up = right</small></span><input type="checkbox" id="tVolume" /><i></i></label>
     </div>
@@ -170,6 +173,16 @@
   </div>
 
   <div class="toast" id="toast" role="status"></div>
+
+  <!-- Browser only: asks to turn the phone sideways for the laptop layout -->
+  <div class="rotate" id="rotate">
+    <div class="rotate-card">
+      <div class="rotate-phone" aria-hidden="true"><i></i></div>
+      <h2>Turn your phone sideways</h2>
+      <p>Glide works like a laptop trackpad when your phone is horizontal.</p>
+      <button class="ghost" id="btnKeepPortrait">Keep using it upright</button>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>
