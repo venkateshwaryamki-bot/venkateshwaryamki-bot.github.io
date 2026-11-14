@@ -63,12 +63,18 @@ Your laptop may then use the phone's mobile data for internet. Turn mobile data 
 you don't want that. iPhones can do the same with Personal Hotspot over the cable,
 using the browser version.
 
-## Horizontal laptop layout
+## Layout: horizontal or vertical
 
-Turn the phone sideways and Glide becomes one wide trackpad, like a laptop's. Left and
-right click areas are built into its bottom edge and a scroll zone runs along its right edge.
-The Android app opens sideways by default. In a phone browser, Glide asks you to rotate
-the phone. To use Glide upright instead, turn off **Settings › Horizontal laptop layout**.
+Pick how you hold the phone in **Settings › Layout**:
+
+- **Horizontal** (default): the phone sideways is one wide trackpad, like a laptop's. Left and
+  right click areas are built into its bottom edge and a scroll zone runs along its right edge.
+- **Vertical:** the phone upright, with a tall pad, a side scroll strip and big buttons below.
+- **Auto:** follows however you're holding the phone.
+
+The rotate button in the top bar flips between horizontal and vertical in one tap. The
+Android app turns the screen itself and remembers your choice. In a phone browser, Glide
+asks you to turn the phone if it's the wrong way round.
 
 ## Gestures
 

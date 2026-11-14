@@ -380,6 +380,21 @@ input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; border: 0; bo
 /* ---------- rotate prompt (browser) ---------- */
 .rotate { display: none; position: fixed; inset: 0; z-index: 15; place-items: center; padding: 24px; background: rgba(8, 8, 13, 0.92); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); text-align: center; }
 @media (orientation: portrait) { body.want-landscape:not(.native) .rotate { display: grid; } }
+@media (orientation: landscape) { body.want-portrait:not(.native) .rotate { display: grid; } }
+body.want-portrait .rotate-phone { animation-name: turn-back; }
+@keyframes turn-back { 0%, 20% { transform: rotate(-90deg); } 55%, 100% { transform: rotate(0); } }
+
+/* ---------- layout picker ---------- */
+.seg { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 5px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); }
+.seg button {
+  display: grid; justify-items: center; gap: 4px; padding: 12px 6px 10px; border-radius: 13px;
+  font-size: 14px; font-weight: 600; color: var(--muted); transition: background 0.2s, color 0.2s;
+}
+.seg button svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.seg button small { font-size: 11.5px; font-weight: 500; color: var(--faint); }
+.seg button[aria-checked="true"] { color: var(--text); background: linear-gradient(135deg, rgba(184, 166, 255, 0.2), rgba(95, 224, 242, 0.1)); box-shadow: inset 0 0 0 1px rgba(184, 166, 255, 0.4); }
+.seg button[aria-checked="true"] svg { color: var(--cyan); }
+.seg button:focus-visible { outline: 2px solid var(--violet); outline-offset: 2px; }
 .rotate-card { max-width: 320px; display: grid; justify-items: center; gap: 10px; }
 .rotate-card h2 { margin: 6px 0 0; font-size: 21px; letter-spacing: -0.02em; }
 .rotate-card p { margin: 0 0 8px; color: var(--muted); }

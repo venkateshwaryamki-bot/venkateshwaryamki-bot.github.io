@@ -64,6 +64,8 @@ public class MainActivity extends Activity {
         w.setStatusBarColor(Color.parseColor("#08080D"));
         w.setNavigationBarColor(Color.parseColor("#08080D"));
         vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+        // Open straight into the layout picked last time (no flash of the wrong orientation).
+        applyLayout(getSharedPreferences("glide", MODE_PRIVATE).getString("layout", "horizontal"));
 
         web = new WebView(this);
         web.setBackgroundColor(Color.parseColor("#08080D"));
@@ -132,6 +134,15 @@ public class MainActivity extends Activity {
             pendingPermission.deny();
         }
         pendingPermission = null;
+    }
+
+    /* ---------------------------------------------------------------- layout / orientation */
+    private void applyLayout(String layout) {
+        int o;
+        if ("vertical".equals(layout)) o = ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT;
+        else if ("auto".equals(layout)) o = ActivityInfo.SCREEN_ORIENTATION_FULL_USER;
+        else o = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE;
+        if (getRequestedOrientation() != o) setRequestedOrientation(o);
     }
 
     /* ---------------------------------------------------------------- full screen */
@@ -226,25 +237,18 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void setVolumeKeys(boolean on) { volumeKeys = on; }
 
-        /** Horizontal laptop layout: hold the screen sideways (either way round), or follow the user. */
+        /** Older pages: true = horizontal, false = follow the user. */
         @JavascriptInterface
-        public void setLandscape(final boolean on) {
+        public void setLandscape(boolean on) { setOrientation(on ? "horizontal" : "auto"); }
+
+        /** Layout picker: "horizontal" (either way round), "vertical", or "auto". Remembered for next launch. */
+        @JavascriptInterface
+        public void setOrientation(final String layout) {
+            getSharedPreferences("glide", MODE_PRIVATE).edit().putString("layout", layout).apply();
             runOnUiThread(new Runnable() {
                 @Override
-                public void run() {
-                    setRequestedOrientation(on ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                                               : ActivityInfo.SCREEN_ORIENTATION_FULL_USER);
-                }
+                public void run() { applyLayout(layout); }
             });
-        }
-
-        /** USB-cable check: is a computer forwarding Glide to this phone's localhost (adb reverse)? */
-        @JavascriptInterface
-        public void usbProbe(final int port) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() { runUsbProbe(port); }
-            }, "glide-usb").start();
         }
 
         @JavascriptInterface

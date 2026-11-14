@@ -15,7 +15,7 @@
   /* ------------------------------------------------------------------ settings */
   const DEFAULTS = {
     speed: 1.6, accel: 0.9, scroll: 1.2,
-    natural: true, inertia: true, tap: true, haptics: true, glow: true, lefty: false, volkeys: false, horizontal: true,
+    natural: true, inertia: true, tap: true, haptics: true, glow: true, lefty: false, volkeys: false, layout: "horizontal",
   };
   const cfg = Object.assign({}, DEFAULTS, store.get("glide.cfg", {}));
   const saveCfg = () => store.set("glide.cfg", cfg);
@@ -728,7 +728,7 @@
                    ["sAccel", "oAccel", "accel", (v) => (v ? `${Math.round(v * 50)}%` : "Off")],
                    ["sScroll", "oScroll", "scroll", (v) => `${v.toFixed(1)}×`]];
   const toggles = [["tNatural", "natural"], ["tInertia", "inertia"], ["tTap", "tap"],
-                   ["tHaptics", "haptics"], ["tGlow", "glow"], ["tLefty", "lefty"], ["tVolume", "volkeys"], ["tHorizontal", "horizontal"]];
+                   ["tHaptics", "haptics"], ["tGlow", "glow"], ["tLefty", "lefty"], ["tVolume", "volkeys"]];
 
   function paintSlider(el) {
     const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
@@ -751,25 +751,59 @@
     $(tid).addEventListener("change", (e) => {
       cfg[key] = e.target.checked; saveCfg();
       if (key === "lefty") document.body.classList.toggle("lefty", cfg.lefty);
-      if (key === "horizontal") applyOrientation();
       if (key === "volkeys" && NATIVE) window.GlideNative.setVolumeKeys(cfg.volkeys);
       buzz(5);
     });
   }
   $("btnReset").addEventListener("click", () => { Object.assign(cfg, DEFAULTS); saveCfg(); loadUI(); buzz(10); });
 
-  /* ------------------------------------------------------------------ horizontal layout */
-  // The app rotates itself; in a browser we ask the person to turn the phone (and lock
-  // the orientation when full screen allows it).
+  /* ------------------------------------------------------------------ layout: horizontal / vertical / auto */
+  // The app turns the screen itself; in a browser we ask the person to turn the phone
+  // (and lock the orientation when full screen allows it).
+  const LAYOUTS = ["horizontal", "vertical", "auto"];
+  if ("horizontal" in cfg) {           // carry over the older on/off setting
+    if (cfg.horizontal === false) cfg.layout = "vertical";
+    delete cfg.horizontal; saveCfg();
+  }
+  if (!LAYOUTS.includes(cfg.layout)) cfg.layout = "horizontal";
+
   function applyOrientation() {
-    document.body.classList.toggle("want-landscape", !!cfg.horizontal);
-    if (NATIVE && typeof window.GlideNative.setLandscape === "function") {
-      try { window.GlideNative.setLandscape(!!cfg.horizontal); } catch {}
+    const L = cfg.layout;
+    document.body.classList.toggle("want-landscape", L === "horizontal");
+    document.body.classList.toggle("want-portrait", L === "vertical");
+    for (const b of document.querySelectorAll(".seg [data-layout]")) b.setAttribute("aria-checked", String(b.dataset.layout === L));
+    const sideways = L === "horizontal";
+    $("rotateTitle").textContent = sideways ? "Turn your phone sideways" : "Turn your phone upright";
+    $("rotateText").textContent = sideways
+      ? "You picked the horizontal layout, which works like a laptop trackpad."
+      : "You picked the vertical layout, for holding the phone upright.";
+    $("btnRotateSwitch").textContent = sideways ? "Use the vertical layout instead" : "Use the horizontal layout instead";
+    if (NATIVE) {
+      try {
+        if (typeof window.GlideNative.setOrientation === "function") window.GlideNative.setOrientation(L);
+        else if (typeof window.GlideNative.setLandscape === "function") window.GlideNative.setLandscape(L === "horizontal");
+      } catch {}
+    } else if (document.fullscreenElement && screen.orientation && screen.orientation.lock) {
+      if (L === "auto") { try { screen.orientation.unlock(); } catch {} }
+      else screen.orientation.lock(L === "horizontal" ? "landscape" : "portrait").catch(() => {});
     }
   }
-  $("btnKeepPortrait").addEventListener("click", () => {
-    cfg.horizontal = false; saveCfg(); loadUI(); buzz(6);
+
+  function setLayout(L, announce) {
+    if (!LAYOUTS.includes(L) || L === cfg.layout) return;
+    cfg.layout = L; saveCfg(); applyOrientation(); buzz(8);
+    if (announce) toast(L === "horizontal" ? "Horizontal layout" : L === "vertical" ? "Vertical layout" : "Auto layout: follows your phone");
+  }
+
+  for (const b of document.querySelectorAll(".seg [data-layout]")) {
+    b.addEventListener("click", () => setLayout(b.dataset.layout, false));
+  }
+  // Top-bar button: flip between horizontal and vertical (from Auto, flip away from how it's held now).
+  $("btnRotate").addEventListener("click", () => {
+    const now = cfg.layout === "auto" ? (matchMedia("(orientation: landscape)").matches ? "horizontal" : "vertical") : cfg.layout;
+    setLayout(now === "horizontal" ? "vertical" : "horizontal", true);
   });
+  $("btnRotateSwitch").addEventListener("click", () => setLayout(cfg.layout === "horizontal" ? "vertical" : "horizontal", true));
 
   const fsBtn = $("btnFullscreen");
   const root = document.documentElement;
@@ -778,8 +812,9 @@
     if (document.fullscreenElement) document.exitFullscreen();
     else {
       const req = (root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: "hide" });
-      if (cfg.horizontal && req && req.then) {
-        req.then(() => screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape")).catch(() => {});
+      if (cfg.layout !== "auto" && req && req.then) {
+        req.then(() => screen.orientation && screen.orientation.lock &&
+          screen.orientation.lock(cfg.layout === "horizontal" ? "landscape" : "portrait")).catch(() => {});
       }
     }
     closeSheets();
