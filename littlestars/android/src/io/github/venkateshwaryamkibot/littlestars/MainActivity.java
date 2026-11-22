@@ -5,6 +5,7 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Vibrator;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.Voice;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.Window;
@@ -17,6 +18,7 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * Little Stars for Android: hosts the learning web app (bundled in assets/www) full-screen, offline,
@@ -43,8 +45,9 @@ public class MainActivity extends Activity {
                 if (status != TextToSpeech.SUCCESS) return;
                 int r = tts.setLanguage(new Locale("en", "IN"));
                 if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) tts.setLanguage(Locale.UK);
-                tts.setSpeechRate(0.88f);
-                tts.setPitch(1.15f);
+                pickFriendlyVoice();
+                tts.setSpeechRate(0.95f);
+                tts.setPitch(1.45f);
                 ttsReady = true;
             }
         });
@@ -77,6 +80,32 @@ public class MainActivity extends Activity {
 
         if (savedInstanceState != null) web.restoreState(savedInstanceState);
         else web.loadUrl("file:///android_asset/www/index.html");
+    }
+
+    /**
+     * Prefer an offline, female English (India) voice - it sounds warmest for little ones.
+     * Google's en-IN voices: "-x-ena" / "-x-enc" are female, "-x-end" / "-x-ene" male.
+     */
+    private void pickFriendlyVoice() {
+        try {
+            Set<Voice> all = tts.getVoices();
+            if (all == null) return;
+            Voice best = null;
+            int bestScore = -1;
+            for (Voice v : all) {
+                Locale l = v.getLocale();
+                if (l == null || !"en".equals(l.getLanguage())) continue;
+                String n = v.getName().toLowerCase(Locale.ROOT);
+                int score = 0;
+                if ("IN".equals(l.getCountry())) score += 40;
+                if (n.contains("-x-ena") || n.contains("-x-enc") || n.contains("female") || n.contains("-x-tpc") || n.contains("-x-sfg")) score += 30;
+                if (n.contains("-x-end") || n.contains("-x-ene") || n.contains("male") && !n.contains("female")) score -= 20;
+                if (!v.isNetworkConnectionRequired()) score += 15;
+                if (v.getQuality() >= Voice.QUALITY_HIGH) score += 5;
+                if (score > bestScore) { bestScore = score; best = v; }
+            }
+            if (best != null) tts.setVoice(best);
+        } catch (Exception ignored) { }
     }
 
     @SuppressWarnings("deprecation")
@@ -132,6 +161,15 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void speak(String text) {
             if (!ttsReady || text == null) return;
+            tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "ls" + (utterance++));
+        }
+
+        /** Speak with a voice character's pitch and speed (1.0 = normal). */
+        @JavascriptInterface
+        public void speakWith(String text, double pitch, double rate) {
+            if (!ttsReady || text == null) return;
+            tts.setPitch((float) Math.max(0.5, Math.min(2.0, pitch)));
+            tts.setSpeechRate((float) Math.max(0.5, Math.min(1.5, rate)));
             tts.speak(text, TextToSpeech.QUEUE_FLUSH, null, "ls" + (utterance++));
         }
 

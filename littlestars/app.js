@@ -40,7 +40,9 @@ const RANKS = [
 ];
 const STICKERS = ['🌈', '🍭', '🚂', '🐳', '🌻', '🎂', '🦖', '🚁', '🍉', '🐙', '🎠', '🏰', '🦋', '🍩', '🚜', '🐢', '🎸', '🌙', '🦒', '🍦', '⛵', '🐝', '🎪', '🪐', '🦩', '🍕', '🏆', '🐲', '💎', '🌟'];
 const STICKER_EVERY = 15;
-const CRAYONS = ['#6c4cf1', '#ff5277', '#ff9a3c', '#22b37f', '#2a9ae0', '#2b2350'];
+const CRAYONS = ['rainbow', '#6c4cf1', '#ff5277', '#ff9a3c', '#22b37f', '#2a9ae0'];
+/** Ink colour for point i of a stroke (the rainbow crayon changes colour as you draw). */
+const inkColor = (c, i) => c === 'rainbow' ? `hsl(${(i * 9) % 360} 88% 58%)` : c;
 const MODES = {
   easy: { label: '✏️ Trace', hint: 'Follow the road from the green dot' },
   dots: { label: '••• Dots', hint: 'Join the dots in the right order' },
@@ -53,6 +55,7 @@ const GAMES = [
   { id: 'picture', e: '🐘', t: 'Picture Match', s: 'Starts with…', l: 'var(--sky-l)' },
   { id: 'next', e: '🧩', t: 'What’s Next?', s: 'Finish the pattern', l: 'var(--mint-l)' },
   { id: 'pair', e: '🔠', t: 'Big & Small', s: 'Match A with a', l: 'var(--sun-l)' },
+  { id: 'train', e: '🚂', t: 'Number Train', s: 'Put them in order', l: 'var(--grape-l)' },
 ];
 const ROUNDS = 8;
 
@@ -108,6 +111,14 @@ function note(freq, dur = 0.35, vol = 0.16, delay = 0, type = 'sine') {
   g2.gain.setValueAtTime(0.0001, t); g2.gain.exponentialRampToValueAtTime(vol * 0.35, t + 0.005); g2.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.25);
   const o2 = a.createOscillator(); o2.frequency.setValueAtTime(freq * 4, t); o2.connect(g2); o2.start(t); o2.stop(t + dur);
 }
+function noise(dur, vol, hp) {
+  const a = actx(); if (!a) return;
+  const len = Math.floor(a.sampleRate * dur), buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+  const src = a.createBufferSource(), f = a.createBiquadFilter(), g = a.createGain();
+  src.buffer = buf; f.type = 'highpass'; f.frequency.value = hp; g.gain.value = vol;
+  src.connect(f).connect(g).connect(a.destination); src.start();
+}
 function slide(f1, f2, dur, vol = 0.12, type = 'triangle') {
   const a = actx(); if (!a) return;
   const t = a.currentTime, o = a.createOscillator(), g = a.createGain();
@@ -117,7 +128,10 @@ function slide(f1, f2, dur, vol = 0.12, type = 'triangle') {
 }
 const sfx = {
   tap() { note(880, 0.12, 0.1); buzz(8); },
-  pop() { slide(900, 1800, 0.08, 0.12, 'sine'); note(1320, 0.15, 0.08, 0.03); buzz(15); },
+  pop() { noise(0.09, 0.35, 1800); slide(700, 1600, 0.07, 0.07, 'sine'); note(1568, 0.2, 0.06, 0.05); buzz(18); },
+  boing() { slide(220, 660, 0.18, 0.12, 'sine'); slide(660, 330, 0.2, 0.06, 'sine'); buzz(12); },
+  giggle() { [988, 1175, 1047, 1319, 1175].forEach((f, i) => note(f, 0.12, 0.08, i * 0.07, 'triangle')); },
+  toot() { note(392, 0.35, 0.12, 0, 'square'); note(494, 0.45, 0.1, 0.28, 'square'); },
   good() { note(784, 0.25, 0.15); note(1175, 0.35, 0.13, 0.09); buzz(20); },
   soft() { slide(330, 250, 0.25, 0.09); buzz(30); },
   stroke() { note(1047, 0.3, 0.12); note(1568, 0.4, 0.08, 0.06); buzz(12); },
@@ -127,24 +141,38 @@ const sfx = {
 function buzz(ms) { try { if (NATIVE && NATIVE.haptic) NATIVE.haptic(ms); } catch (e) { /* ignore */ } }
 
 /* ================================================================== voice */
+/* Three voice characters kids can pick from. Higher pitch + bouncier pace = more playful. */
+const VOICES = {
+  twinkle: { e: '🌟', n: 'Twinkle', d: 'Playful', pitch: 1.45, rate: 0.95 },
+  bunny: { e: '🐰', n: 'Bunny', d: 'Squeaky', pitch: 1.85, rate: 1.02 },
+  teacher: { e: '👩‍🏫', n: 'Teacher', d: 'Calm', pitch: 1.08, rate: 0.86 },
+};
+const voiceStyle = () => VOICES[S.voiceStyle] || VOICES.twinkle;
 let VOICE = null;
 function pickVoice() {
   if (!('speechSynthesis' in window)) return;
-  const vs = speechSynthesis.getVoices(); if (!vs.length) return;
-  VOICE = vs.find((v) => /en[-_]IN/i.test(v.lang)) ||
-    vs.find((v) => /^en/i.test(v.lang) && /female|samantha|karen|moira|tessa|zira|google uk english female|google us/i.test(v.name)) ||
-    vs.find((v) => /^en/i.test(v.lang)) || null;
+  const vs = speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang)); if (!vs.length) return;
+  const female = /female|woman|girl|samantha|karen|moira|tessa|zira|veena|heera|neerja|aria|jenny|sonia|libby|natasha|google uk english female|google us english/i;
+  VOICE = vs.find((v) => /en[-_]IN/i.test(v.lang) && female.test(v.name)) ||
+    vs.find((v) => female.test(v.name)) ||
+    vs.find((v) => /en[-_]IN/i.test(v.lang)) || vs[0] || null;
 }
+const YAY = ['Yay!', 'Woohoo!', 'Hooray!', 'Yippee!', 'Wow-wee!', 'Ta-da!'];
+const yay = () => pick(YAY);
 if (!NATIVE && 'speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function say(text) {
   if (!S.voice) return;
-  if (NATIVE && NATIVE.speak) { try { NATIVE.speak(text); } catch (e) { /* ignore */ } return; }
+  const st = voiceStyle();
+  if (NATIVE && NATIVE.speak) {
+    try { if (NATIVE.speakWith) NATIVE.speakWith(text, st.pitch, st.rate); else NATIVE.speak(text); } catch (e) { /* ignore */ }
+    return;
+  }
   if (!('speechSynthesis' in window)) return;
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     if (VOICE) { u.voice = VOICE; u.lang = VOICE.lang; } else u.lang = 'en-IN';
-    u.rate = 0.85; u.pitch = 1.2;
+    u.rate = st.rate; u.pitch = st.pitch;
     speechSynthesis.speak(u);
   } catch (e) { /* ignore */ }
 }
@@ -247,7 +275,9 @@ function celebrate(list, done) {
 /* ================================================================== router */
 let cleanups = [], backFn = null;
 function onCleanup(f) { cleanups.push(f); }
+let navToken = 0;
 function go(name, ...args) {
+  navToken++;
   cleanups.forEach((f) => { try { f(); } catch (e) { /* ignore */ } });
   cleanups = []; backFn = null;
   closePopup(); hush();
@@ -287,7 +317,7 @@ function daily(p) {
     { t: 'game', g: pick(['balloon', 'picture', 'pair']), kind: pick(['abc', '123']) },
     { t: 'trace', set: 'num', ch: fresh('num') || anyOf('num') },
     review ? { t: 'trace', set: review.set, ch: review.ch } : { t: 'trace', set: 'lower', ch: fresh('lower') || anyOf('lower') },
-    { t: 'game', g: pick(['count', 'next']) },
+    { t: 'game', g: pick(['count', 'next', 'train']) },
   ];
   p.daily = { day: today(), items, done: 0 };
   save();
@@ -342,12 +372,19 @@ SCREENS.who = function () {
       <button class="toggle ${S.sound ? '' : 'off'}" data-t="sound">🔊 Sounds <span class="sw"></span></button>
       <button class="toggle ${S.voice ? '' : 'off'}" data-t="voice">🗣️ Voice <span class="sw"></span></button>
     </div>
+    <div class="voices"><span class="vl">Who talks?</span>${Object.entries(VOICES).map(([k, v]) => `<button class="vchip ${(S.voiceStyle || 'twinkle') === k ? 'on' : ''}" data-vs="${k}"><span>${v.e}</span>${v.n}<small>${v.d}</small></button>`).join('')}</div>
     ${NATIVE ? '' : '<div style="text-align:center;margin-top:18px"><a class="btn sky" href="LittleStars.apk" download style="text-decoration:none">📱 Get the Android app</a></div>'}
     <div class="foot">Works offline · No ads · Progress stays on this device</div>
   </div>`;
   $$('.kid[data-id]', app).forEach((b) => b.onclick = () => { sfx.tap(); S.current = b.dataset.id; save(); say(`Hello ${me().name}!`); go('home'); });
   $('[data-add]', app).onclick = () => { sfx.tap(); go('newKid'); };
   $$('[data-t]', app).forEach((b) => b.onclick = () => { S[b.dataset.t] = !S[b.dataset.t]; save(); b.classList.toggle('off', !S[b.dataset.t]); sfx.tap(); });
+  $$('[data-vs]', app).forEach((b) => b.onclick = () => {
+    S.voiceStyle = b.dataset.vs; S.voice = true; save(); sfx.tap();
+    $$('[data-vs]', app).forEach((x) => x.classList.toggle('on', x === b));
+    $('[data-t="voice"]', app).classList.toggle('off', false);
+    say({ twinkle: 'Hi! I am Twinkle! Let us play!', bunny: 'Hippity hoppity! I am Bunny!', teacher: 'Hello! I will help you learn.' }[b.dataset.vs]);
+  });
   setTimeout(() => say(S.profiles.length ? 'Who is learning today?' : 'Hi! I am Twinkle. Let us make your star card!'), 400);
 };
 
@@ -383,7 +420,7 @@ SCREENS.home = function () {
   const d = daily(p);
   const streak = streakOf(p);
   const doneCount = (k) => SETS[k].items.filter((c) => (p.best[k + ':' + c] || 0) > 0).length;
-  const nodeIcon = (it) => it.t === 'trace' ? `<span style="font-family:Andika;font-size:.95em;color:${'#2b2350'}">${it.ch}</span>` : GAMES.find((g) => g.id === it.g).e;
+  const nodeIcon = (it) => it.t === 'trace' ? `<span style="font-family:Kid;font-size:.95em;color:${'#2b2350'}">${it.ch}</span>` : GAMES.find((g) => g.id === it.g).e;
   const nodes = d.items.map((it, i) => `<div class="node ${i < d.done ? 'done' : i === d.done ? 'now' : ''}">${nodeIcon(it)}</div>`).join('');
   const allDone = d.done >= d.items.length;
   const greet = allDone ? `You finished today’s adventure, ${p.name}! 🎉` : d.done ? `Let’s keep going, ${p.name}!` : `Hi ${p.name}! Ready for today’s adventure?`;
@@ -494,7 +531,7 @@ SCREENS.trace = function (setKey, idx) {
   const samples = glyphSamples(ch);
   const nS = samples.length;
   const TOL = mode === 'magic' ? 14 : 11, LOOK = 9;
-  let color = S.crayon && CRAYONS.includes(S.crayon) ? S.crayon : CRAYONS[0];
+  let color = S.crayon && CRAYONS.includes(S.crayon) ? S.crayon : CRAYONS[1];
 
   app.innerHTML = `<div class="screen fit trace">
     <div class="topbar">${backBtn()}<div class="word"><span class="pic">${pic}</span><span class="w">${label}</span></div>
@@ -511,7 +548,7 @@ SCREENS.trace = function (setKey, idx) {
       <button class="icon-btn side" data-next aria-label="Next">${ICON.next}</button>
     </div>
     <div class="tools">
-      <div class="crayons">${CRAYONS.map((c) => `<button class="crayon ${c === color ? 'on' : ''}" data-c="${c}" style="--c:${c}" aria-label="Crayon"></button>`).join('')}</div>
+      <div class="crayons">${CRAYONS.map((c) => `<button class="crayon ${c === color ? 'on' : ''}" data-c="${c}" style="--c:${c === 'rainbow' ? 'conic-gradient(#ff5277, #ffbe1a, #22c08a, #2a9ae0, #8b5cf6, #ff5277)' : c}" aria-label="${c === 'rainbow' ? 'Rainbow crayon' : 'Crayon'}"></button>`).join('')}</div>
       <button class="icon-btn" data-watch aria-label="Watch me">${ICON.watch}</button>
       <button class="icon-btn" data-redo aria-label="Start again">${ICON.redo}</button>
     </div>
@@ -563,11 +600,15 @@ SCREENS.trace = function (setKey, idx) {
   function drawDone() {
     const g = dctx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, dc.width, dc.height);
     inUnits(g);
-    for (let i = 0; i < cur && i < nS; i++) { g.strokeStyle = color + '40'; g.lineWidth = 15; g.stroke(paths[i]); }
+    for (let i = 0; i < cur && i < nS; i++) { g.strokeStyle = color === 'rainbow' ? `hsla(${i * 70 + 330} 90% 60% / .3)` : color + '40'; g.lineWidth = 15; g.stroke(paths[i]); }
   }
   function strokeInk(g, s) {
-    g.strokeStyle = s.c; g.fillStyle = s.c; g.lineWidth = 9.5;
+    g.strokeStyle = g.fillStyle = inkColor(s.c, 0); g.lineWidth = 9.5;
     if (s.pts.length === 1) { g.beginPath(); g.arc(s.pts[0][0], s.pts[0][1], 4.75, 0, 7); g.fill(); return; }
+    if (s.c === 'rainbow') {
+      for (let i = 1; i < s.pts.length; i++) { g.strokeStyle = inkColor(s.c, i); g.beginPath(); g.moveTo(s.pts[i - 1][0], s.pts[i - 1][1]); g.lineTo(s.pts[i][0], s.pts[i][1]); g.stroke(); }
+      return;
+    }
     g.beginPath(); g.moveTo(s.pts[0][0], s.pts[0][1]);
     for (let i = 1; i < s.pts.length; i++) g.lineTo(s.pts[i][0], s.pts[i][1]);
     g.stroke();
@@ -639,7 +680,7 @@ SCREENS.trace = function (setKey, idx) {
     sfx.stroke();
     drawDone(); placeStart();
     if (cur >= nS) setTimeout(finish, 350);
-    else if (mode !== 'magic') say(pick(['Good!', 'Yes!', 'Now number ' + (cur + 1), 'Great!']));
+    else if (mode !== 'magic') say(pick(['Good!', 'Yes!', 'Wheee!', 'Super!']) + ' Now line number ' + (cur + 1) + '!');
   }
   function toUnits(e) { const r = ic.getBoundingClientRect(); return [((e.clientX - r.left) * (W / r.width) - tx) / u, ((e.clientY - r.top) * (H / r.height) - ty) / u]; }
   function sparkle(e) {
@@ -661,9 +702,10 @@ SCREENS.trace = function (setKey, idx) {
   ic.addEventListener('pointermove', (e) => {
     if (e.pointerId !== activeId || !curInk) return;
     const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
-    inUnits(ictx); ictx.strokeStyle = curInk.c; ictx.lineWidth = 9.5;
+    inUnits(ictx); ictx.lineWidth = 9.5;
     for (const ev of evs) {
       const pt = toUnits(ev);
+      ictx.strokeStyle = inkColor(curInk.c, curInk.pts.length);
       ictx.beginPath(); ictx.moveTo(lastU[0], lastU[1]); ictx.lineTo(pt[0], pt[1]); ictx.stroke();
       // walk in small steps so fast fingers still follow the road
       const dx = pt[0] - lastU[0], dy = pt[1] - lastU[1], steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 2));
@@ -714,11 +756,14 @@ SCREENS.trace = function (setKey, idx) {
     for (const c of [dc, ic]) sg.drawImage(c, ox, oy, side, side, 0, 0, 220, 220);
     const snap = snapC.toDataURL('image/png');
     const praise = pick(PRAISE[stars]);
+    // show what the symbol means: a picture word, or that many things
+    const meaning = isNum ? (+ch === 0 ? '<span class="emo">🫧</span><small>nothing!</small>' : `<span class="emo many">${pic.repeat(+ch)}</span><small>${NUM_WORDS[+ch]}</small>`)
+      : `<span class="emo">${word[1]}</span><small>${word[0]}</small>`;
     const show = (animate) => {
       const el = popup(`<div class="hero">${mascot(stars === 3 ? 'wow' : 'happy', stars === 3 ? 'cheer' : '')}</div>
         <h2>${praise}</h2>
         <div class="bigstars">${[0, 1, 2].map((i) => `<span class="${!animate && i < stars ? 'on' : ''}">⭐</span>`).join('')}</div>
-        <img class="snap" src="${snap}" alt="What you wrote">
+        <div class="meaning"><img class="snap" src="${snap}" alt="What you wrote"><span class="eq">=</span><span class="pw">${meaning}</span></div>
         <p>${bonus ? '✨ Memory bonus! ' : ''}+${stars + bonus} star${stars + bonus > 1 ? 's' : ''}</p>
         <div class="acts"><button class="btn ghost" data-again>↻ Again</button><button class="btn lg" data-nx>${next.label}</button></div>`, (el) => {
         $('[data-again]', el).onclick = () => { sfx.tap(); go('trace', setKey, idx); };
@@ -729,8 +774,10 @@ SCREENS.trace = function (setKey, idx) {
     show(true);
     setTimeout(() => {
       if (stars === 3) confetti();
-      say(`${praise} ${describe(ch)}!`);
-      if (parties.length) setTimeout(() => celebrate(parties, () => show(false)), 1500);
+      say(`${yay()} ${praise} ${describe(ch)}!`);
+      // if the child already moved on, still celebrate - but don't bring the old result card back
+      const tok = navToken;
+      if (parties.length) setTimeout(() => celebrate(parties, () => { if (tok === navToken) show(false); }), 1500);
     }, 350 + stars * 380);
   }
 
@@ -756,14 +803,15 @@ SCREENS.trace = function (setKey, idx) {
 };
 
 /* ================================================================== games */
-function gameFrame(id, title, body) {
+function gameFrame(id, title, body, rounds = ROUNDS) {
   app.innerHTML = `<div class="screen fit">
     <div class="gtop">${backBtn()}<div class="track"><i id="trk"></i></div><span class="pill"><span class="ic star">⭐</span>${me().stars}</span></div>
     ${body}</div>`;
   setBack(() => { ADV = false; go('home'); });
   let score = 0, misses = 0;
   return {
-    right() { score++; $('#trk').style.width = (score / ROUNDS) * 100 + '%'; sfx.good(); return score >= ROUNDS; },
+    get score() { return score; },
+    right() { score++; $('#trk').style.width = (score / rounds) * 100 + '%'; sfx.good(); return score >= rounds; },
     wrong() { misses++; sfx.soft(); },
     end(again) {
       const stars = misses <= 1 ? 3 : misses <= 4 ? 2 : 1;
@@ -772,7 +820,7 @@ function gameFrame(id, title, body) {
       const next = afterActivity('Play again ↻', again);
       sfx.win(); confetti(180);
       const praise = pick(PRAISE[stars]);
-      say(`${praise} You finished ${title}!`);
+      say(`${yay()} ${praise} You finished ${title}!`);
       const show = () => popup(`<div class="hero">${mascot('wow', 'cheer')}</div><h2>${praise}</h2>
         <div class="bigstars">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}">⭐</span>`).join('')}</div>
         <p>+${stars} star${stars > 1 ? 's' : ''}</p>
@@ -781,54 +829,102 @@ function gameFrame(id, title, body) {
         $('[data-nx]', el).onclick = () => { sfx.tap(); next.run(); };
       });
       show();
-      if (parties.length) setTimeout(() => celebrate(parties, show), 1300);
+      const tok = navToken;
+      if (parties.length) setTimeout(() => celebrate(parties, () => { if (tok === navToken) show(); }), 1300);
     },
   };
 }
 const GRASS = '<svg class="grass" viewBox="0 0 400 56" preserveAspectRatio="none"><path fill="#9fdea9" d="M0 24 C80 6 160 30 240 18 S360 4 400 16 V56 H0z"/><path fill="#86d293" d="M0 40 C100 26 220 46 300 34 S380 28 400 34 V56 H0z"/></svg>';
 
+const BALLOON_COLORS = [
+  { c: '#ff5c7a', l: '#ffc2cd', d: '#d6385a' }, { c: '#8b5cf6', l: '#d9c8ff', d: '#6236d4' },
+  { c: '#ffbe1a', l: '#fff0b3', d: '#e09400' }, { c: '#22c08a', l: '#b6f2da', d: '#11966a' },
+  { c: '#2a9ae0', l: '#bfe6ff', d: '#1474b8' }, { c: '#ff8a3d', l: '#ffd5b8', d: '#e0651a' },
+  { c: '#f45cc8', l: '#ffc9ef', d: '#c83aa0' },
+];
+let balloonId = 0;
+function balloonSVG(ch, col, s) {
+  const id = 'bg' + (++balloonId);
+  const fs = ch.length > 1 ? 46 : 60;
+  return `<svg viewBox="0 0 100 172" width="${100 * s}" height="${172 * s}">
+    <defs><radialGradient id="${id}" cx=".36" cy=".3" r=".78"><stop offset="0" stop-color="${col.l}"/><stop offset=".45" stop-color="${col.c}"/><stop offset="1" stop-color="${col.d}"/></radialGradient></defs>
+    <path class="ribbon" d="M50 124 q-9 10 0 20 t0 20 t-3 8" stroke="rgba(80,70,120,.45)" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M50 5 C81 5 97 31 97 58 C97 91 70 115 50 119 C30 115 3 91 3 58 C3 31 19 5 50 5Z" fill="url(#${id})"/>
+    <path d="M43 126 L50 117 L57 126 Q50 130 43 126Z" fill="${col.d}"/>
+    <ellipse cx="29" cy="33" rx="8" ry="17" fill="#fff" opacity=".55" transform="rotate(-28 29 33)"/>
+    <circle cx="24" cy="62" r="3.6" fill="#fff" opacity=".45"/>
+    <text x="50" y="${ch.length > 1 ? 76 : 80}" text-anchor="middle" font-family="Kid, Andika, sans-serif" font-weight="700" font-size="${fs}"
+      fill="#fff" stroke="${col.d}" stroke-width="6" stroke-linejoin="round" paint-order="stroke">${ch}</text>
+  </svg>`;
+}
+const SKY_DECOR = `<svg class="fcloud" viewBox="0 0 200 90"><path fill="#fff" d="M40 80 a30 30 0 0 1 4-59 a38 38 0 0 1 72-6 a28 28 0 0 1 44 18 a24 24 0 0 1 0 47z"/></svg>
+  <svg class="fcloud f2" viewBox="0 0 200 90"><path fill="#fff" d="M40 80 a30 30 0 0 1 4-59 a38 38 0 0 1 72-6 a28 28 0 0 1 44 18 a24 24 0 0 1 0 47z"/></svg>
+  <div class="bird">🐦</div>
+  <div class="flowers">🌼<span>🌷</span>🌸<span>🌻</span>🌼</div>`;
+
 SCREENS.play_balloon = function (kind) {
   const pool = kind === '123' ? NUMBERS.slice(1) : UPPER;
   const f = gameFrame('balloon', 'Balloon Pop', `
     <div class="ask">Pop the <span class="target" id="tg"></span></div>
-    <div class="sky-field" id="fb">${GRASS}</div>`);
+    <div class="sky-field" id="fb">${SKY_DECOR}${GRASS}</div>`);
   const fb = $('#fb'), tg = $('#tg');
-  const COLORS = ['#ff6b81', '#6c4cf1', '#ffb31a', '#22b37f', '#2a9ae0', '#ff8a3d'];
-  let target = null, balloons = [], raf = 0, last = performance.now(), spawnT = 0, since = 0, over = false;
-  function newTarget() { let t; do { t = pick(pool); } while (t === target); target = t; tg.textContent = t; since = 0; say(`Pop the ${spoken(t)}!`); }
+  let target = null, balloons = [], raf = 0, last = performance.now(), spawnT = 0, since = 0, over = false, score = 0, idle = 0;
+  function newTarget() {
+    let t; do { t = pick(pool); } while (t === target);
+    target = t; tg.textContent = t; since = 0; idle = 0;
+    tg.classList.remove('boing'); void tg.offsetWidth; tg.classList.add('boing');
+    say(`Pop the ${spoken(t)}!`);
+  }
   function spawn() {
     const W = fb.clientWidth, H = fb.clientHeight;
     const c = Math.random() < 0.4 || since >= 2 ? target : pick(pool);
     since = c === target ? 0 : since + 1;
+    const sc = (W < 500 ? 0.9 : 1.05) * (0.88 + Math.random() * 0.26);
+    const col = pick(BALLOON_COLORS);
     const el = document.createElement('div'); el.className = 'balloon';
-    el.innerHTML = `<div class="b" style="--c:${pick(COLORS)}">${c}</div>`;
-    const b = { el, c, x: 10 + Math.random() * Math.max(10, W - 116), y: H + 10, v: 42 + Math.random() * 28 + Math.min(W, 900) * 0.02, sway: Math.random() * 6, dead: false };
+    el.innerHTML = balloonSVG(c, col, sc);
+    const b = { el, c, col, sc, x: 6 + Math.random() * Math.max(10, W - 100 * sc - 12), y: H + 10, v: (40 + Math.random() * 26 + Math.min(W, 900) * 0.02) * (1 + score * 0.05), sway: Math.random() * 6, dead: false };
     el.style.transform = `translate(${b.x}px, ${b.y}px)`;
     el.addEventListener('pointerdown', (e) => { e.preventDefault(); tapB(b); });
     fb.appendChild(el); balloons.push(b);
   }
+  function burst(b) {
+    const cx = b.x + 50 * b.sc, cy = b.y + 60 * b.sc;
+    for (let i = 0; i < 14; i++) {
+      const sh = document.createElement('i'); sh.className = 'shard';
+      const a = (i / 14) * Math.PI * 2, r = 60 + Math.random() * 50;
+      sh.style.cssText = `left:${cx}px;top:${cy}px;--c:${i % 3 ? b.col.c : pick(BALLOON_COLORS).c};--dx:${Math.cos(a) * r}px;--dy:${Math.sin(a) * r}px;--r:${rnd(360)}deg`;
+      fb.appendChild(sh); setTimeout(() => sh.remove(), 700);
+    }
+    const t = document.createElement('div'); t.className = 'poptxt'; t.textContent = pick(['POP!', 'POP!', 'YAY!', 'BOOM!']);
+    t.style.left = cx + 'px'; t.style.top = cy + 'px'; fb.appendChild(t); setTimeout(() => t.remove(), 800);
+    const fl = document.createElement('div'); fl.className = 'floater'; fl.textContent = b.c; fl.style.color = b.col.c;
+    fl.style.left = cx + 'px'; fl.style.top = cy + 'px'; fb.appendChild(fl); setTimeout(() => fl.remove(), 1100);
+  }
   function tapB(b) {
     if (b.dead || over) return;
     if (b.c === target) {
-      b.dead = true; b.el.classList.add('popped'); sfx.pop();
-      const burst = document.createElement('div'); burst.className = 'burst'; burst.textContent = '✨';
-      burst.style.left = b.x + 28 + 'px'; burst.style.top = b.y + 30 + 'px'; fb.appendChild(burst); setTimeout(() => burst.remove(), 600);
-      setTimeout(() => b.el.remove(), 300);
-      if (f.right()) { over = true; setTimeout(() => f.end(() => go('play_balloon', kind)), 500); } else setTimeout(newTarget, 450);
+      b.dead = true; b.el.classList.add('popped'); sfx.pop(); burst(b); score++;
+      setTimeout(() => b.el.remove(), 260);
+      if (f.right()) { over = true; setTimeout(() => f.end(() => go('play_balloon', kind)), 600); }
+      else setTimeout(() => { say(pick(['Pop!', yay(), 'Yes!'])); setTimeout(newTarget, 700); }, 200);
     } else {
-      f.wrong(); b.el.classList.remove('nope'); void b.el.offsetWidth; b.el.classList.add('nope');
-      say(`That is ${spoken(b.c)}. Find ${spoken(target)}!`);
+      f.wrong(); sfx.boing();
+      b.el.classList.remove('nope'); void b.el.offsetWidth; b.el.classList.add('nope');
+      say(`Oops! That is ${spoken(b.c)}. Find ${spoken(target)}!`);
     }
   }
   function tick(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    spawnT -= dt;
+    spawnT -= dt; idle += dt;
     if (spawnT <= 0 && !over) { spawn(); spawnT = 1.05; }
     for (const b of balloons) {
       if (b.dead) continue;
-      b.y -= b.v * dt; b.sway += dt * 2;
-      b.el.style.transform = `translate(${b.x + Math.sin(b.sway) * 10}px, ${b.y}px)`;
-      if (b.y < -200) { b.dead = true; b.el.remove(); }
+      b.y -= b.v * dt; b.sway += dt * 1.8;
+      b.el.style.transform = `translate(${b.x + Math.sin(b.sway) * 10}px, ${b.y}px) rotate(${Math.sin(b.sway + 1) * 5}deg)`;
+      // stuck for a while? make the right balloons glow as a gentle hint
+      b.el.classList.toggle('hint', idle > 7 && b.c === target);
+      if (b.y < -220) { b.dead = true; b.el.remove(); }
     }
     balloons = balloons.filter((b) => !b.dead);
     raf = requestAnimationFrame(tick);
@@ -844,7 +940,9 @@ SCREENS.play_count = function () {
     <div class="choices" id="ch"></div>`);
   let lastN = 0;
   function round() {
-    let n; do { n = 1 + rnd(10); } while (n === lastN); lastN = n;
+    // start with small numbers and grow as the child gets them right
+    const maxN = Math.min(10, 4 + f.score * 1);
+    let n; do { n = 1 + rnd(maxN); } while (n === lastN && maxN > 1); lastN = n;
     const e = pick(COUNT_EMO);
     $('#q').innerHTML = `How many <span style="font-size:1.3em">${e}</span> ?`;
     say('How many? Tap each one to count!');
@@ -944,6 +1042,64 @@ SCREENS.play_pair = function () {
   round();
 };
 
+/* 🚂 Number Train: tap the wagons in order to build the train (sequencing 1-2-3 / A-B-C). */
+SCREENS.play_train = function () {
+  const TRAINS = 4;
+  const f = gameFrame('train', 'Number Train', `
+    <div class="ask" id="q">Build the train in order!</div>
+    <div class="rail-wrap"><div class="train" id="train"></div><div class="rail"></div></div>
+    <div class="yard" id="yard"></div>`, TRAINS);
+  let t = 0;
+  const WAGON = ['#ff5c7a', '#ffbe1a', '#22c08a', '#2a9ae0', '#8b5cf6', '#ff8a3d', '#f45cc8'];
+  function round() {
+    const letters = t % 2 === 1;
+    const n = Math.min(6, 3 + t);
+    const list = letters ? UPPER : NUMBERS.slice(1);
+    const start = letters ? rnd(list.length - n + 1) : (t < 2 ? 0 : rnd(10 - n + 1));
+    const seq = list.slice(start, start + n);
+    $('#q').textContent = letters ? 'Put the letters in order!' : 'Put the numbers in order!';
+    const train = $('#train');
+    train.className = 'train';
+    train.innerHTML = '<span class="engine">🚂</span>' + seq.map((c, i) => `<span class="slot" data-i="${i}">${i === 0 ? c : ''}</span>`).join('');
+    // the first wagon is given as a hint, so the child knows where to begin
+    const first = $('#train .slot'); first.classList.add('filled'); first.style.setProperty('--c', WAGON[0]);
+    let next = 1;
+    $('#yard').innerHTML = shuffle(seq.slice(1).map((c, i) => ({ c, col: WAGON[(i + 1) % WAGON.length] })))
+      .map((w) => `<button class="wagon" data-v="${w.c}" style="--c:${w.col}">${w.c}</button>`).join('');
+    say(`Choo choo! ${spoken(seq[0])} is first. What comes next?`);
+    $$('#yard .wagon', app).forEach((b) => b.onclick = () => {
+      if (b.dataset.v === seq[next]) {
+        const slot = $(`#train .slot[data-i="${next}"]`);
+        slot.textContent = b.dataset.v; slot.style.setProperty('--c', b.style.getPropertyValue('--c')); slot.classList.add('filled');
+        b.classList.add('gone'); sfx.good(); say(spoken(b.dataset.v));
+        next++;
+        if (next >= seq.length) {
+          sfx.toot(); confetti(50);
+          setTimeout(() => say(`${yay()} ${seq.map(spoken).join(', ')}! Choo choo!`), 300);
+          setTimeout(() => train.classList.add('go'), 900);
+          t++;
+          if (f.right()) setTimeout(() => f.end(() => go('play_train')), 2600); else setTimeout(round, 3000);
+        }
+      } else {
+        f.wrong(); sfx.boing(); b.classList.toggle('nope', false); void b.offsetWidth; b.classList.add('nope');
+        say(`Hmm, that is ${spoken(b.dataset.v)}. What comes after ${spoken(seq[next - 1])}?`);
+      }
+    });
+  }
+  round();
+};
+
+/* Tap Twinkle anywhere for a giggle. */
+const TWINKLE_LINES = ['Hee hee! That tickles!', 'Twinkle twinkle, you are a star!', 'Boing boing! I love to jump!', 'You are my best friend!',
+  'Let us learn something new!', 'Wheee! Again, again!', 'High five! Clap clap!', 'I can see you smiling!'];
+document.addEventListener('click', (e) => {
+  const m = e.target.closest && e.target.closest('.mascot');
+  if (!m) return;
+  sfx.giggle(); say(pick(TWINKLE_LINES));
+  m.classList.toggle('cheer', false); void m.getBoundingClientRect(); m.classList.add('cheer');
+  setTimeout(() => m.classList.toggle('cheer', false), 2200);
+});
+
 /* ================================================================== my stars */
 SCREENS.trophy = function () {
   const p = me(); const r = rankOf(p.stars); const nx = nextRank(p.stars);
@@ -1002,7 +1158,7 @@ SCREENS.report = function () {
       📅 Played on <b>${p.days || 0}</b> day(s) · 🔥 streak <b>${streakOf(p)}</b><br>
       ✏️ Practised <b>${tried}</b> of ${total} letters &amp; numbers<br>
       🎮 ${GAMES.map((g) => `${g.e} ${'⭐'.repeat(p.games[g.id] || 0) || '–'}`).join(' &nbsp; ')}<br>
-      ${weak.length ? `🔁 Needs more practice: <b style="font-family:Andika;font-size:1.2em">${weak.join(' ')}</b>` : '👍 Nothing flagged for extra practice yet.'}
+      ${weak.length ? `🔁 Needs more practice: <b style="font-family:Kid;font-size:1.2em">${weak.join(' ')}</b>` : '👍 Nothing flagged for extra practice yet.'}
     </div>
     <div class="legend"><span><i style="background:#efebf8"></i>Not tried</span><span><i style="background:#ffe0c7"></i>1★</span><span><i style="background:#fff0b0"></i>2★</span><span><i style="background:#c4f2dc"></i>3★</span></div>
     ${block('upper')}${block('lower')}${block('num')}
@@ -1028,7 +1184,7 @@ SCREENS.report = function () {
 
 /* ================================================================== boot */
 const fontsReady = (document.fonts && document.fonts.load)
-  ? Promise.all([document.fonts.load('700 40px "Andika"'), document.fonts.load('600 20px "Fredoka"')]).catch(() => {}).then(() => new Promise((r) => setTimeout(r, 30)))
+  ? Promise.all([document.fonts.load('700 40px "Andika"'), document.fonts.load('700 40px "Kid"', 'A0123456789'), document.fonts.load('600 20px "Fredoka"')]).catch(() => {}).then(() => new Promise((r) => setTimeout(r, 30)))
   : Promise.resolve();
 addEventListener('pointerdown', () => actx(), { once: true });
 fontsReady.then(() => { if (me()) go('home'); else go('who'); });
