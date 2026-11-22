@@ -11,7 +11,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-/** Hosts the Imposter Evaru? web game (bundled in assets/www) full-screen and offline. */
+/** Hosts the Who's the Imposter? web game (bundled in assets/www) full-screen and offline. */
 public class MainActivity extends Activity {
     private WebView web;
 
@@ -19,7 +19,7 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         web = new WebView(this);
-        web.setBackgroundColor(Color.parseColor("#22080E"));
+        web.setBackgroundColor(Color.parseColor("#0D0A14"));
         web.setOverScrollMode(View.OVER_SCROLL_NEVER);
         web.setVerticalScrollBarEnabled(false);
         setContentView(web);

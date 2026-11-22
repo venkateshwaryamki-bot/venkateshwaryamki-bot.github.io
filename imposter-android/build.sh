@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Builds the Imposter Evaru? Android APK from ../imposter (the web game) without Gradle.
+# Builds the Who's the Imposter? Android APK from ../imposter (the web game) without Gradle.
 # Needs (Ubuntu/Debian): apt-get install aapt android-sdk-platform-23 dalvik-exchange apksigner zipalign default-jdk
 # Usage: KEYSTORE=/path/imposter.keystore KS_PASS=... ./build.sh
 set -euo pipefail
@@ -9,11 +9,11 @@ ANDROID_JAR=${ANDROID_JAR:-/usr/lib/android-sdk/platforms/android-23/android.jar
 KEYSTORE=${KEYSTORE:-imposter-release.keystore}
 KS_PASS=${KS_PASS:?set KS_PASS to the keystore password}
 KS_ALIAS=${KS_ALIAS:-imposter}
-OUT=${OUT:-../imposter/ImposterEvaru.apk}
+OUT=${OUT:-../imposter/WhosTheImposter.apk}
 B=build
 
 rm -rf "$B" && mkdir -p "$B/gen" "$B/classes" "$B/assets/www"
-cp ../imposter/index.html ../imposter/app.css ../imposter/app.js ../imposter/words.js ../imposter/icon-192.png "$B/assets/www/"
+cp -r ../imposter/index.html ../imposter/app.css ../imposter/app.js ../imposter/words.js ../imposter/icon-192.png ../imposter/fonts "$B/assets/www/"
 
 aapt package -f -m -J "$B/gen" -M AndroidManifest.xml -S res -I "$ANDROID_JAR"
 javac -nowarn -Xlint:-options -source 8 -target 8 -encoding UTF-8 -bootclasspath "$ANDROID_JAR" \

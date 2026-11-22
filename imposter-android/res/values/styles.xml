@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="bg">#FF22080E</color>
-    <color name="icon_bg">#FF4A1520</color>
+    <color name="bg">#FF0D0A14</color>
+    <color name="icon_bg">#FFF2A24A</color>
     <style name="ImposterTheme" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/bg</item>
         <item name="android:colorBackground">@color/bg</item>
