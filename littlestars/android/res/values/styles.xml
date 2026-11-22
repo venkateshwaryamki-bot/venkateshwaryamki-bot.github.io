@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="sky">#FFCDEEFF</color>
+    <color name="icon_bg">#FF7B5CFF</color>
+    <style name="StarsTheme" parent="@android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/sky</item>
+        <item name="android:colorBackground">@color/sky</item>
+        <item name="android:statusBarColor">@color/sky</item>
+        <item name="android:navigationBarColor">@color/sky</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:colorAccent">#FF6C4CF1</item>
+        <item name="android:colorPrimary">#FF6C4CF1</item>
+        <item name="android:colorPrimaryDark">#FFCDEEFF</item>
+    </style>
+</resources>

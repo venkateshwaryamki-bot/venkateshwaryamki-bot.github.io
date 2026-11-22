@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <title>Little Stars — Trace, Play &amp; Learn</title>
-  <meta name="description" content="Little Stars: a playful app for nursery and LKG kids to practise writing ABC and 123 by hand, play learning games and earn stars." />
-  <meta name="theme-color" content="#7c5cff" />
+  <meta name="description" content="Little Stars: a playful app for nursery and LKG kids to learn to write ABC and 123 the right way, play learning games and earn stars." />
+  <meta name="theme-color" content="#cdeeff" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-title" content="Little Stars" />
@@ -17,10 +17,28 @@
   <link rel="stylesheet" href="app.css" />
 </head>
 <body>
-  <div class="sky" aria-hidden="true"><span></span><span></span><span></span></div>
+  <div class="scene" aria-hidden="true">
+    <svg class="sun" viewBox="0 0 240 240">
+      <g class="rays" fill="#ffe08a" opacity=".7">
+        <path d="M120 10 l10 40 h-20z" /><path d="M120 230 l10 -40 h-20z" /><path d="M10 120 l40 10 v-20z" /><path d="M230 120 l-40 10 v-20z" />
+        <path d="M42 42 l36 22 -14 14z" /><path d="M198 198 l-36 -22 14 -14z" /><path d="M198 42 l-22 36 -14 -14z" /><path d="M42 198 l22 -36 14 14z" />
+      </g>
+      <circle cx="120" cy="120" r="56" fill="#ffd54f" /><circle cx="120" cy="120" r="44" fill="#ffe27a" />
+    </svg>
+    <svg class="cloud" viewBox="0 0 200 90"><path fill="#fff" d="M40 80 a30 30 0 0 1 4-59 a38 38 0 0 1 72-6 a28 28 0 0 1 44 18 a24 24 0 0 1 0 47z" /></svg>
+    <svg class="cloud c1" viewBox="0 0 200 90"><path fill="#fff" d="M40 80 a30 30 0 0 1 4-59 a38 38 0 0 1 72-6 a28 28 0 0 1 44 18 a24 24 0 0 1 0 47z" /></svg>
+    <svg class="cloud c2" viewBox="0 0 200 90"><path fill="#fff" d="M40 80 a30 30 0 0 1 4-59 a38 38 0 0 1 72-6 a28 28 0 0 1 44 18 a24 24 0 0 1 0 47z" /></svg>
+    <svg class="cloud c3" viewBox="0 0 200 90"><path fill="#fff" d="M40 80 a30 30 0 0 1 4-59 a38 38 0 0 1 72-6 a28 28 0 0 1 44 18 a24 24 0 0 1 0 47z" /></svg>
+    <svg class="hills" viewBox="0 0 1000 200" preserveAspectRatio="none">
+      <path fill="#bfeac4" d="M0 90 C150 30 300 40 430 90 S760 40 1000 80 V200 H0z" />
+      <path fill="#9fdea9" d="M0 140 C200 80 380 110 520 140 S820 90 1000 130 V200 H0z" />
+      <path fill="#86d293" d="M0 175 C240 140 520 160 700 170 S900 150 1000 165 V200 H0z" />
+    </svg>
+  </div>
   <main id="app"></main>
   <div id="popup-root"></div>
   <canvas id="confetti" aria-hidden="true"></canvas>
+  <script src="glyphs.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

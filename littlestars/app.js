@@ -1,4 +1,5 @@
-/* Little Stars — trace, play & learn for nursery / LKG kids. No build step, no network needed. */
+/* Little Stars — learn to write ABC & 123 the right way, play, and earn stars.
+ * Runs as a web app and inside the Android APK (which adds a native voice + haptics bridge: window.LSNative). */
 'use strict';
 
 const $ = (s, r = document) => r.querySelector(s);
@@ -8,8 +9,9 @@ const rnd = (n) => Math.floor(Math.random() * n);
 const pick = (a) => a[rnd(a.length)];
 const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const NATIVE = window.LSNative || null;
 
-/* ------------------------------------------------------------------ data */
+/* ================================================================== content */
 const WORDS = {
   A: ['Apple', '🍎'], B: ['Ball', '⚽'], C: ['Cat', '🐱'], D: ['Dog', '🐶'], E: ['Elephant', '🐘'],
   F: ['Fish', '🐟'], G: ['Grapes', '🍇'], H: ['House', '🏠'], I: ['Ice cream', '🍦'], J: ['Juice', '🧃'],
@@ -23,38 +25,38 @@ const UPPER = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 const LOWER = UPPER.map((c) => c.toLowerCase());
 const NUMBERS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10'];
 const SETS = {
-  upper: { title: 'ABC', name: 'Big Letters', items: UPPER, color: '#ff6fa5', tile: 'pink' },
-  lower: { title: 'abc', name: 'Small Letters', items: LOWER, color: '#4cb8ff', tile: 'blue' },
-  num: { title: '123', name: 'Numbers', items: NUMBERS, color: '#f39c12', tile: 'yellow' },
+  upper: { title: 'ABC', name: 'Big Letters', items: UPPER, c: 'var(--coral)', l: 'var(--coral-l)' },
+  lower: { title: 'abc', name: 'Small Letters', items: LOWER, c: 'var(--sky)', l: 'var(--sky-l)' },
+  num: { title: '123', name: 'Numbers', items: NUMBERS, c: 'var(--tang)', l: 'var(--tang-l)' },
 };
-const AVATARS = ['🐯', '🐼', '🐰', '🦊', '🐨', '🐸', '🦁', '🐵', '🐶', '🐱', '🐧', '🦄'];
+const AVATARS = [['🐯', '#fff0d6'], ['🐼', '#eceff6'], ['🐰', '#ffe9f0'], ['🦊', '#ffe6d6'], ['🐨', '#e8edf7'], ['🐸', '#e1f6e1'],
+  ['🦁', '#fff2cc'], ['🐵', '#f4e6d8'], ['🐶', '#f3e9dc'], ['🐱', '#fff0e0'], ['🐧', '#e1f1ff'], ['🦄', '#f3e6ff']];
+const avBg = (a) => (AVATARS.find((x) => x[0] === a) || AVATARS[0])[1];
 const RANKS = [
-  { at: 0, e: '🥚', n: 'Little Egg' },
-  { at: 10, e: '🐣', n: 'Baby Chick' },
-  { at: 30, e: '🐥', n: 'Happy Birdie' },
-  { at: 60, e: '🐰', n: 'Busy Bunny' },
-  { at: 100, e: '🦊', n: 'Clever Fox' },
-  { at: 160, e: '🐼', n: 'Smart Panda' },
-  { at: 240, e: '🦁', n: 'Brave Lion' },
-  { at: 340, e: '🦄', n: 'Magic Unicorn' },
-  { at: 460, e: '🚀', n: 'Rocket Star' },
+  { at: 0, e: '🥚', n: 'Little Egg' }, { at: 10, e: '🐣', n: 'Baby Chick' }, { at: 30, e: '🐥', n: 'Happy Birdie' },
+  { at: 60, e: '🐰', n: 'Busy Bunny' }, { at: 100, e: '🦊', n: 'Clever Fox' }, { at: 160, e: '🐼', n: 'Smart Panda' },
+  { at: 240, e: '🦁', n: 'Brave Lion' }, { at: 340, e: '🦄', n: 'Magic Unicorn' }, { at: 460, e: '🚀', n: 'Rocket Star' },
   { at: 600, e: '👑', n: 'Super Star King' },
 ];
 const STICKERS = ['🌈', '🍭', '🚂', '🐳', '🌻', '🎂', '🦖', '🚁', '🍉', '🐙', '🎠', '🏰', '🦋', '🍩', '🚜', '🐢', '🎸', '🌙', '🦒', '🍦', '⛵', '🐝', '🎪', '🪐', '🦩', '🍕', '🏆', '🐲', '💎', '🌟'];
 const STICKER_EVERY = 15;
-const CRAYONS = ['#7c5cff', '#ff4f8b', '#ff9a3c', '#2fbf71', '#2b9be0', '#3a2e5c'];
+const CRAYONS = ['#6c4cf1', '#ff5277', '#ff9a3c', '#22b37f', '#2a9ae0', '#2b2350'];
 const MODES = {
-  easy: { label: '✏️ Easy', hint: 'Colour inside the letter!' },
-  dots: { label: '••• Dots', hint: 'Follow the dots!' },
-  magic: { label: '✨ Magic', hint: 'Look… then write it yourself!' },
+  easy: { label: '✏️ Trace', hint: 'Follow the road from the green dot' },
+  dots: { label: '••• Dots', hint: 'Join the dots in the right order' },
+  magic: { label: '✨ Memory', hint: 'Watch, then write it by yourself — bonus star!' },
 };
-const PRAISE = {
-  3: ['Superstar!', 'Wow, perfect!', 'Amazing!', 'Fantastic!'],
-  2: ['Great job!', 'Very good!', 'Well done!'],
-  1: ['Good try!', 'Nice work!', 'Keep going!'],
-};
+const PRAISE = { 3: ['Superstar!', 'Perfect!', 'Amazing!', 'Fantastic!'], 2: ['Great job!', 'Very good!', 'Well done!'], 1: ['Good try!', 'Nice work!', 'You did it!'] };
+const GAMES = [
+  { id: 'balloon', e: '🎈', t: 'Balloon Pop', s: 'Pop the right one', l: 'var(--coral-l)', ask: true },
+  { id: 'count', e: '🍎', t: 'Count & Tap', s: 'How many?', l: 'var(--tang-l)' },
+  { id: 'picture', e: '🐘', t: 'Picture Match', s: 'Starts with…', l: 'var(--sky-l)' },
+  { id: 'next', e: '🧩', t: 'What’s Next?', s: 'Finish the pattern', l: 'var(--mint-l)' },
+  { id: 'pair', e: '🔠', t: 'Big & Small', s: 'Match A with a', l: 'var(--sun-l)' },
+];
+const ROUNDS = 8;
 
-/* ----------------------------------------------------------------- state */
+/* ================================================================== state */
 const KEY = 'littlestars.v1';
 let S = load();
 function load() {
@@ -63,13 +65,17 @@ function load() {
 }
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* storage blocked */ } }
 function me() { return S.profiles.find((p) => p.id === S.current) || null; }
+function dayStr(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+const today = () => dayStr(new Date());
+const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dayStr(d); };
 function rankOf(stars) { let r = RANKS[0]; for (const x of RANKS) if (stars >= x.at) r = x; return r; }
 function nextRank(stars) { return RANKS.find((x) => x.at > stars) || null; }
 function stickerCount(stars) { return Math.min(STICKERS.length, Math.floor(stars / STICKER_EVERY)); }
-function today() { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
-function boardPos(p) { const sorted = S.profiles.slice().sort((a, b) => b.stars - a.stars); return sorted.findIndex((x) => x.id === p.id) + 1; }
+function boardPos(p) { return S.profiles.slice().sort((a, b) => b.stars - a.stars).findIndex((x) => x.id === p.id) + 1; }
+function streakOf(p) { return p.streakDay === today() || p.streakDay === yesterday() ? (p.streak || 0) : 0; }
+function starsRow(n, max = 3) { let s = ''; for (let i = 0; i < max; i++) s += i < n ? '<b>★</b>' : '★'; return s; }
 
-/** Give stars to the current child; returns a list of celebrations (rank up, sticker). */
+/** Give stars to the current child; returns celebrations (rank up / new sticker) to show. */
 function addStars(n) {
   const p = me(); if (!p || n <= 0) return [];
   const before = p.stars;
@@ -79,12 +85,11 @@ function addStars(n) {
   const out = [];
   const r0 = rankOf(before), r1 = rankOf(p.stars);
   if (r1 !== r0) out.push({ type: 'rank', rank: r1 });
-  const s0 = stickerCount(before), s1 = stickerCount(p.stars);
-  for (let i = s0; i < s1; i++) out.push({ type: 'sticker', sticker: STICKERS[i] });
+  for (let i = stickerCount(before); i < stickerCount(p.stars); i++) out.push({ type: 'sticker', sticker: STICKERS[i] });
   return out;
 }
 
-/* ----------------------------------------------------------------- sound */
+/* ================================================================== sound + touch feel */
 let AC = null;
 function actx() {
   if (!S.sound) return null;
@@ -92,28 +97,36 @@ function actx() {
   if (AC.state === 'suspended') AC.resume();
   return AC;
 }
-function tone(freq, dur, type = 'sine', vol = 0.18, delay = 0, slideTo = 0) {
+/** Soft marimba-like note. */
+function note(freq, dur = 0.35, vol = 0.16, delay = 0, type = 'sine') {
   const a = actx(); if (!a) return;
   const t = a.currentTime + delay;
-  const o = a.createOscillator(), g = a.createGain();
-  o.type = type; o.frequency.setValueAtTime(freq, t);
-  if (slideTo) o.frequency.exponentialRampToValueAtTime(slideTo, t + dur);
-  g.gain.setValueAtTime(0.0001, t);
-  g.gain.exponentialRampToValueAtTime(vol, t + 0.015);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.05);
+  const g = a.createGain(); g.connect(a.destination);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const o = a.createOscillator(); o.type = type; o.frequency.setValueAtTime(freq, t); o.connect(g); o.start(t); o.stop(t + dur + 0.05);
+  const g2 = a.createGain(); g2.connect(a.destination);
+  g2.gain.setValueAtTime(0.0001, t); g2.gain.exponentialRampToValueAtTime(vol * 0.35, t + 0.005); g2.gain.exponentialRampToValueAtTime(0.0001, t + dur * 0.25);
+  const o2 = a.createOscillator(); o2.frequency.setValueAtTime(freq * 4, t); o2.connect(g2); o2.start(t); o2.stop(t + dur);
+}
+function slide(f1, f2, dur, vol = 0.12, type = 'triangle') {
+  const a = actx(); if (!a) return;
+  const t = a.currentTime, o = a.createOscillator(), g = a.createGain();
+  o.type = type; o.frequency.setValueAtTime(f1, t); o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
 }
 const sfx = {
-  tap() { tone(620, 0.07, 'triangle', 0.12); },
-  pop() { tone(1200, 0.12, 'square', 0.08, 0, 180); tone(500, 0.08, 'triangle', 0.12, 0.02); },
-  good() { tone(660, 0.12, 'triangle', 0.18); tone(990, 0.2, 'triangle', 0.18, 0.1); },
-  bad() { tone(260, 0.22, 'triangle', 0.14, 0, 170); },
-  star(i) { tone(700 + i * 220, 0.22, 'sine', 0.2); tone(1400 + i * 440, 0.12, 'sine', 0.06); },
-  win() { [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.25, 'triangle', 0.18, i * 0.12)); tone(1319, 0.5, 'sine', 0.14, 0.5); },
-  draw() { tone(300 + Math.random() * 200, 0.03, 'sine', 0.02); },
+  tap() { note(880, 0.12, 0.1); buzz(8); },
+  pop() { slide(900, 1800, 0.08, 0.12, 'sine'); note(1320, 0.15, 0.08, 0.03); buzz(15); },
+  good() { note(784, 0.25, 0.15); note(1175, 0.35, 0.13, 0.09); buzz(20); },
+  soft() { slide(330, 250, 0.25, 0.09); buzz(30); },
+  stroke() { note(1047, 0.3, 0.12); note(1568, 0.4, 0.08, 0.06); buzz(12); },
+  star(i) { note([1047, 1319, 1568][i] || 1568, 0.5, 0.16); },
+  win() { [523, 659, 784, 1047, 1319].forEach((f, i) => note(f, 0.45, 0.14, i * 0.1)); buzz(40); },
 };
+function buzz(ms) { try { if (NATIVE && NATIVE.haptic) NATIVE.haptic(ms); } catch (e) { /* ignore */ } }
 
-/* ---------------------------------------------------------------- speech */
+/* ================================================================== voice */
 let VOICE = null;
 function pickVoice() {
   if (!('speechSynthesis' in window)) return;
@@ -122,9 +135,11 @@ function pickVoice() {
     vs.find((v) => /^en/i.test(v.lang) && /female|samantha|karen|moira|tessa|zira|google uk english female|google us/i.test(v.name)) ||
     vs.find((v) => /^en/i.test(v.lang)) || null;
 }
-if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+if (!NATIVE && 'speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 function say(text) {
-  if (!S.voice || !('speechSynthesis' in window)) return;
+  if (!S.voice) return;
+  if (NATIVE && NATIVE.speak) { try { NATIVE.speak(text); } catch (e) { /* ignore */ } return; }
+  if (!('speechSynthesis' in window)) return;
   try {
     speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
@@ -133,27 +148,64 @@ function say(text) {
     speechSynthesis.speak(u);
   } catch (e) { /* ignore */ }
 }
-/** How a symbol should be read out loud. */
+function hush() { if (NATIVE && NATIVE.stop) { try { NATIVE.stop(); } catch (e) { /* ignore */ } } else if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+/** How a symbol is read aloud. */
 function spoken(ch) {
   if (/^\d+$/.test(ch)) return NUM_WORDS[+ch] || ch;
-  const up = ch.toUpperCase();
-  const name = up === 'A' ? 'ay' : up;
+  const up = ch.toUpperCase(), name = up === 'A' ? 'ay' : up;
   return ch === up ? name : 'small ' + name;
 }
-function describe(ch) {
-  if (/^\d+$/.test(ch)) return `${NUM_WORDS[+ch]}`;
-  const [w] = WORDS[ch.toUpperCase()];
-  return `${spoken(ch)} for ${w}`;
-}
+function describe(ch) { return /^\d+$/.test(ch) ? NUM_WORDS[+ch] : `${spoken(ch)} for ${WORDS[ch.toUpperCase()][0]}`; }
 
-/* -------------------------------------------------------------- confetti */
+/* ================================================================== art */
+function starPath(cx, cy, R, r) {
+  let d = '';
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r : R; d += (i ? 'L' : 'M') + (cx + rr * Math.cos(a)).toFixed(1) + ' ' + (cy + rr * Math.sin(a)).toFixed(1); }
+  return d + 'Z';
+}
+const STAR_D = starPath(60, 66, 50, 25);
+/** Twinkle, the star buddy. mood: happy | wow */
+function mascot(mood = 'happy', cls = '') {
+  const mouth = mood === 'wow' ? '<ellipse cx="60" cy="80" rx="6" ry="7" fill="#2b2350"/><ellipse cx="60" cy="83" rx="3.5" ry="3" fill="#ff7b93"/>'
+    : '<path d="M50 77 Q60 89 70 77" fill="#ff7b93" stroke="#2b2350" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>';
+  return `<svg class="mascot ${cls}" viewBox="0 0 120 120" aria-hidden="true">
+    <ellipse cx="60" cy="114" rx="30" ry="4" fill="rgba(43,35,80,.12)"/>
+    <path d="${STAR_D}" fill="#ffb81f" stroke="#ffb81f" stroke-width="14" stroke-linejoin="round"/>
+    <path d="${STAR_D}" fill="#ffcc3d" stroke="#ffcc3d" stroke-width="8" stroke-linejoin="round" transform="translate(0 -2)"/>
+    <path d="M38 40 Q46 30 56 30" stroke="#fff3c4" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <g class="eye"><ellipse cx="48" cy="66" rx="5.5" ry="7.5" fill="#2b2350"/><circle cx="50" cy="63" r="2.2" fill="#fff"/></g>
+    <g class="eye"><ellipse cx="72" cy="66" rx="5.5" ry="7.5" fill="#2b2350"/><circle cx="74" cy="63" r="2.2" fill="#fff"/></g>
+    <ellipse cx="39" cy="77" rx="6" ry="4" fill="#ff8fa3" opacity=".75"/><ellipse cx="81" cy="77" rx="6" ry="4" fill="#ff8fa3" opacity=".75"/>
+    ${mouth}</svg>`;
+}
+const LOGO = `<svg class="logo" viewBox="0 0 380 120" aria-label="Little Stars">
+  <g font-family="Fredoka, sans-serif" font-weight="700" text-anchor="middle" paint-order="stroke" stroke-linejoin="round">
+    <text x="116" y="80" font-size="64" fill="#ff6b81" stroke="#fff" stroke-width="12">Little</text>
+    <text x="290" y="80" font-size="64" fill="#6c4cf1" stroke="#fff" stroke-width="12">Stars</text>
+  </g>
+  <path d="${starPath(368, 22, 13, 6)}" fill="#ffc542" stroke="#ffc542" stroke-width="5" stroke-linejoin="round"/>
+  <path d="${starPath(26, 96, 10, 4.5)}" fill="#3fb6f2" stroke="#3fb6f2" stroke-width="3" stroke-linejoin="round"/>
+</svg>`;
+const ICON = {
+  back: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  speak: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
+  redo: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.5-5.8"/><path d="M4 4v5h5"/></svg>',
+  watch: '<svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+  prev: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
+  next: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
+  gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>',
+};
+const backBtn = () => `<button class="icon-btn" data-back aria-label="Back">${ICON.back}</button>`;
+
+/* ================================================================== confetti */
 const cv = $('#confetti'); const cx = cv.getContext('2d');
 let bits = [], confRaf = 0;
 function confetti(count = 120) {
   cv.width = innerWidth * devicePixelRatio; cv.height = innerHeight * devicePixelRatio;
-  const colors = ['#ff6fa5', '#7c5cff', '#ffc93c', '#4cb8ff', '#39d98a', '#ff9a3c'];
+  const colors = ['#ff6b81', '#6c4cf1', '#ffc542', '#3fb6f2', '#2ecc9a', '#ff9a4d'];
   for (let i = 0; i < count; i++) {
-    bits.push({ x: innerWidth / 2 + (Math.random() - 0.5) * 120, y: innerHeight * 0.45, vx: (Math.random() - 0.5) * 16, vy: -Math.random() * 16 - 4, r: Math.random() * 6 + 4, c: pick(colors), a: Math.random() * 6, va: (Math.random() - 0.5) * 0.4, life: 1 });
+    bits.push({ x: innerWidth / 2 + (Math.random() - 0.5) * 160, y: innerHeight * 0.42, vx: (Math.random() - 0.5) * 17, vy: -Math.random() * 16 - 5,
+      r: Math.random() * 5 + 4, c: pick(colors), a: Math.random() * 6, va: (Math.random() - 0.5) * 0.4, life: 1, star: Math.random() < 0.25 });
   }
   if (!confRaf) confRaf = requestAnimationFrame(tickConf);
 }
@@ -161,47 +213,44 @@ function tickConf() {
   const d = devicePixelRatio; cx.setTransform(d, 0, 0, d, 0, 0); cx.clearRect(0, 0, innerWidth, innerHeight);
   bits = bits.filter((b) => b.y < innerHeight + 30 && b.life > 0);
   for (const b of bits) {
-    b.vy += 0.45; b.vx *= 0.99; b.x += b.vx; b.y += b.vy; b.a += b.va; b.life -= 0.006;
+    b.vy += 0.42; b.vx *= 0.99; b.x += b.vx; b.y += b.vy; b.a += b.va; b.life -= 0.006;
     cx.save(); cx.translate(b.x, b.y); cx.rotate(b.a); cx.fillStyle = b.c; cx.globalAlpha = Math.min(1, b.life * 2);
-    cx.fillRect(-b.r, -b.r / 2, b.r * 2, b.r); cx.restore();
+    if (b.star) { cx.scale(b.r / 25, b.r / 25); cx.translate(-60, -66); cx.fill(new Path2D(STAR_D)); } else cx.fillRect(-b.r, -b.r / 2, b.r * 2, b.r);
+    cx.restore();
   }
   confRaf = bits.length ? requestAnimationFrame(tickConf) : 0;
   if (!bits.length) cx.clearRect(0, 0, innerWidth, innerHeight);
 }
 
-/* ---------------------------------------------------------------- popups */
+/* ================================================================== popups */
 const popRoot = $('#popup-root');
 function popup(html, onMount) {
   closePopup();
   popRoot.innerHTML = `<div class="overlay"><div class="pop">${html}</div></div>`;
   const el = $('.pop', popRoot);
-  el.classList.add('arming'); setTimeout(() => el.classList.remove('arming'), 900);
+  el.classList.add('arming'); setTimeout(() => el.classList.remove('arming'), 900);  // no accidental taps while still drawing
   if (onMount) onMount(el);
   return el;
 }
 function closePopup() { popRoot.innerHTML = ''; }
-/** Show rank-up / sticker celebrations one after another, then run done(). */
 function celebrate(list, done) {
   if (!list.length) { done && done(); return; }
   const [c, ...rest] = list;
   sfx.win(); confetti(160);
   const html = c.type === 'rank'
-    ? `<div class="big-emo">${c.rank.e}</div><h2>New rank!</h2><p>You are now a <b>${c.rank.n}</b>!</p><div class="acts"><button class="btn big" data-ok>Yay! 🎉</button></div>`
-    : `<div class="big-emo">${c.sticker}</div><h2>New sticker!</h2><p>A new sticker for your sticker book!</p><div class="acts"><button class="btn big pink" data-ok>Cool! ✨</button></div>`;
-  say(c.type === 'rank' ? `Hooray! You are now a ${c.rank.n}!` : 'You got a new sticker!');
+    ? `<div class="hero"><span class="big">${c.rank.e}</span></div><h2>New rank!</h2><p>You are now a <b>${c.rank.n}</b>!</p><div class="acts"><button class="btn lg" data-ok>Yay! 🎉</button></div>`
+    : `<div class="hero"><span class="big">${c.sticker}</span></div><h2>New sticker!</h2><p>It’s in your sticker book.</p><div class="acts"><button class="btn lg coral" data-ok>Cool! ✨</button></div>`;
+  say(c.type === 'rank' ? `Hooray! You are now a ${c.rank.n}!` : 'Wow! You got a new sticker!');
   popup(html, (el) => { $('[data-ok]', el).onclick = () => { sfx.tap(); closePopup(); celebrate(rest, done); }; });
 }
-function starsRow(n, max = 3) { let s = ''; for (let i = 0; i < max; i++) s += i < n ? '<b>★</b>' : '★'; return s; }
 
-/* ---------------------------------------------------------------- router */
-let cleanups = [];
-let backFn = null;
+/* ================================================================== router */
+let cleanups = [], backFn = null;
 function onCleanup(f) { cleanups.push(f); }
 function go(name, ...args) {
   cleanups.forEach((f) => { try { f(); } catch (e) { /* ignore */ } });
   cleanups = []; backFn = null;
-  closePopup();
-  if ('speechSynthesis' in window) speechSynthesis.cancel();
+  closePopup(); hush();
   SCREENS[name](...args);
   window.scrollTo(0, 0);
 }
@@ -210,69 +259,116 @@ function setBack(fn) {
   const b = $('[data-back]', app);
   if (b) b.onclick = () => { sfx.tap(); fn(); };
 }
-// Hardware / gesture back button goes "up" one screen instead of leaving the app.
-history.replaceState({ ls: 0 }, ''); history.pushState({ ls: 1 }, '');
-addEventListener('popstate', () => {
-  history.pushState({ ls: 1 }, '');
-  if (popRoot.innerHTML) { closePopup(); return; }
-  if (backFn) backFn();
-});
-
-const ICON = {
-  back: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
-  speak: '<svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/></svg>',
-  clear: '<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>',
-  eye: '<svg viewBox="0 0 24 24"><path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>',
-  prev: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
-  next: '<svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg>',
+/** Android back button (native) and browser back both step "up" one screen. */
+window.lsBack = function () {
+  if (popRoot.innerHTML) { closePopup(); return true; }
+  if (backFn) { backFn(); return true; }
+  return false;
 };
-const backBtn = () => `<button class="round" data-back aria-label="Back">${ICON.back}</button>`;
+if (!NATIVE) {
+  history.replaceState({ ls: 0 }, ''); history.pushState({ ls: 1 }, '');
+  addEventListener('popstate', () => { history.pushState({ ls: 1 }, ''); window.lsBack(); });
+}
 
-/* --------------------------------------------------------------- screens */
+/* ================================================================== daily adventure */
+let ADV = false;
+function daily(p) {
+  if (p.daily && p.daily.day === today()) return p.daily;
+  const tried = (k, c) => (p.tries[k + ':' + c] || 0) > 0;
+  const fresh = (k) => SETS[k].items.find((c) => !tried(k, c));
+  const weak = [];
+  for (const k of Object.keys(SETS)) for (const c of SETS[k].items) if (tried(k, c) && (p.best[k + ':' + c] || 0) < 3) weak.push({ set: k, ch: c, b: p.best[k + ':' + c] || 0 });
+  weak.sort((a, b) => a.b - b.b);
+  const anyOf = (k) => pick(SETS[k].items);
+  const upperNew = fresh('upper');
+  const review = weak.find((w) => w.ch !== upperNew);
+  const items = [
+    { t: 'trace', set: 'upper', ch: upperNew || anyOf('upper') },
+    { t: 'game', g: pick(['balloon', 'picture', 'pair']), kind: pick(['abc', '123']) },
+    { t: 'trace', set: 'num', ch: fresh('num') || anyOf('num') },
+    review ? { t: 'trace', set: review.set, ch: review.ch } : { t: 'trace', set: 'lower', ch: fresh('lower') || anyOf('lower') },
+    { t: 'game', g: pick(['count', 'next']) },
+  ];
+  p.daily = { day: today(), items, done: 0 };
+  save();
+  return p.daily;
+}
+function runAdventure() {
+  const p = me(); const d = daily(p);
+  if (d.done >= d.items.length) { finishAdventure(); return; }
+  ADV = true;
+  const it = d.items[d.done];
+  if (it.t === 'trace') go('trace', it.set, SETS[it.set].items.indexOf(it.ch));
+  else go('play_' + it.g, it.kind || 'abc');
+}
+/** Called when any activity finishes; returns {label, run} for the "continue" button. */
+function afterActivity(defaultLabel, defaultRun) {
+  if (!ADV) return { label: defaultLabel, run: defaultRun };
+  const p = me(); const d = daily(p);
+  d.done = Math.min(d.items.length, d.done + 1); save();
+  return d.done >= d.items.length ? { label: 'Finish 🏁', run: finishAdventure } : { label: 'Next ➜', run: runAdventure };
+}
+function finishAdventure() {
+  ADV = false;
+  const p = me();
+  if (p.streakDay !== today()) {
+    p.streak = p.streakDay === yesterday() ? (p.streak || 0) + 1 : 1;
+    p.streakDay = today();
+  }
+  save();
+  const parties = addStars(5);
+  go('home');
+  sfx.win(); confetti(220);
+  say(`Hooray! You finished today’s adventure! Five bonus stars! See you tomorrow!`);
+  popup(`<div class="hero">${mascot('wow', 'cheer')}</div><h2>Adventure done!</h2>
+    <p>+5 bonus stars ⭐ &nbsp;·&nbsp; 🔥 ${p.streak} day${p.streak > 1 ? 's' : ''} in a row</p>
+    <div class="acts"><button class="btn lg mint" data-ok>Yay!</button></div>`, (el) => {
+    $('[data-ok]', el).onclick = () => { sfx.tap(); closePopup(); celebrate(parties, () => go('home')); };
+  });
+}
+
+/* ================================================================== screens */
 const SCREENS = {};
 
-/* Who's playing? */
 SCREENS.who = function () {
-  const kids = S.profiles.map((p) => {
-    const r = rankOf(p.stars);
-    return `<button class="kid" data-id="${p.id}"><div class="av">${p.avatar}</div><div class="nm">${esc(p.name)}</div><div class="st">⭐ ${p.stars} · ${r.e}</div></button>`;
-  }).join('');
+  ADV = false;
+  const kids = S.profiles.map((p) => `<button class="card kid" data-id="${p.id}"><div class="avatar" style="--bg:${avBg(p.avatar)}">${p.avatar}</div>
+    <div class="nm">${esc(p.name)}</div><div class="st">${rankOf(p.stars).e} ⭐ ${p.stars}</div></button>`).join('');
   app.innerHTML = `<div class="screen">
-    <div class="hero"><h1 class="logo"><span class="l1">Little</span> <span class="l2">Stars</span> <span class="star">⭐</span></h1>
-    <div class="tag">Trace · Play · Learn ABC &amp; 123</div></div>
-    <div class="bubble"><div class="mascot">🦉</div><div class="say">${S.profiles.length ? 'Who is playing today?' : 'Hello! Let’s make your star card!'}</div></div>
-    <div class="kids">${kids}<button class="kid add" data-add><div class="av">＋</div><div class="nm">Add child</div></button></div>
-    <div class="settings">
-      <button class="toggle ${S.sound ? '' : 'off'}" data-t="sound">🔊 Sounds</button>
-      <button class="toggle ${S.voice ? '' : 'off'}" data-t="voice">🗣️ Voice</button>
+    <div class="brand">${LOGO}<div class="sub">Write · Play · Shine</div></div>
+    <div class="talk" style="justify-content:center;margin-top:14px">${mascot()}<div class="bubble">${S.profiles.length ? 'Who is learning today?' : 'Hi! I’m Twinkle. Let’s make your star card!'}</div></div>
+    <div class="kids">${kids}<button class="card kid add" data-add><div class="avatar">＋</div><div class="nm">Add child</div></button></div>
+    <div class="toggles">
+      <button class="toggle ${S.sound ? '' : 'off'}" data-t="sound">🔊 Sounds <span class="sw"></span></button>
+      <button class="toggle ${S.voice ? '' : 'off'}" data-t="voice">🗣️ Voice <span class="sw"></span></button>
     </div>
-    <div class="foot">Works offline · progress is saved on this device</div>
+    ${NATIVE ? '' : '<div style="text-align:center;margin-top:18px"><a class="btn sky" href="LittleStars.apk" download style="text-decoration:none">📱 Get the Android app</a></div>'}
+    <div class="foot">Works offline · No ads · Progress stays on this device</div>
   </div>`;
-  $$('.kid[data-id]', app).forEach((b) => b.onclick = () => { sfx.tap(); S.current = b.dataset.id; save(); const p = me(); say(`Hello ${p.name}!`); go('home'); });
+  $$('.kid[data-id]', app).forEach((b) => b.onclick = () => { sfx.tap(); S.current = b.dataset.id; save(); say(`Hello ${me().name}!`); go('home'); });
   $('[data-add]', app).onclick = () => { sfx.tap(); go('newKid'); };
-  $$('[data-t]', app).forEach((b) => b.onclick = () => { S[b.dataset.t] = !S[b.dataset.t]; save(); sfx.tap(); go('who'); });
-  if (!S.profiles.length) setTimeout(() => say('Hello! Let us make your star card!'), 400);
+  $$('[data-t]', app).forEach((b) => b.onclick = () => { S[b.dataset.t] = !S[b.dataset.t]; save(); b.classList.toggle('off', !S[b.dataset.t]); sfx.tap(); });
+  setTimeout(() => say(S.profiles.length ? 'Who is learning today?' : 'Hi! I am Twinkle. Let us make your star card!'), 400);
 };
 
-/* New child */
 SCREENS.newKid = function () {
-  let av = AVATARS[S.profiles.length % AVATARS.length];
+  let av = AVATARS[S.profiles.length % AVATARS.length][0];
   app.innerHTML = `<div class="screen">
-    <div class="bar">${backBtn()}<h1>New Star Card</h1><div class="spacer"></div></div>
-    <div class="panel">
+    <div class="topbar">${backBtn()}<h1>New star card</h1><div class="sp"></div></div>
+    <div class="card form">
       <h2>What’s your name?</h2>
-      <input class="field" id="nm" maxlength="16" placeholder="Name" autocomplete="off" />
-      <h2 style="margin-top:20px">Pick your buddy!</h2>
-      <div class="avgrid">${AVATARS.map((a) => `<button data-av="${a}" class="${a === av ? 'on' : ''}">${a}</button>`).join('')}</div>
-      <button class="btn big green" id="go" style="width:100%">Let’s go! 🚀</button>
+      <input class="field" id="nm" maxlength="16" placeholder="Type a name" autocomplete="off" />
+      <h2 style="margin-top:22px">Pick a buddy</h2>
+      <div class="avgrid">${AVATARS.map(([a, bg]) => `<button data-av="${a}" style="--bg:${bg}" class="${a === av ? 'on' : ''}">${a}</button>`).join('')}</div>
+      <button class="btn lg mint block" id="go">Let’s go! 🚀</button>
     </div></div>`;
   setBack(() => go('who'));
   $$('[data-av]', app).forEach((b) => b.onclick = () => { av = b.dataset.av; $$('[data-av]', app).forEach((x) => x.classList.toggle('on', x === b)); sfx.pop(); });
   const nm = $('#nm');
   $('#go').onclick = () => {
     const name = nm.value.trim();
-    if (!name) { nm.focus(); nm.style.borderColor = '#ff6fa5'; sfx.bad(); return; }
-    const p = { id: 'k' + Date.now().toString(36), name, avatar: av, stars: 0, best: {}, tries: {}, games: {}, days: 0, created: Date.now() };
+    if (!name) { nm.focus(); nm.style.borderColor = 'var(--coral)'; sfx.soft(); return; }
+    const p = { id: 'k' + Date.now().toString(36), name, avatar: av, stars: 0, best: {}, tries: {}, games: {}, days: 0, streak: 0, created: Date.now() };
     S.profiles.push(p); S.current = p.id; save();
     sfx.win(); confetti(); say(`Welcome ${name}! Let us learn and play!`);
     go('home');
@@ -280,386 +376,433 @@ SCREENS.newKid = function () {
   nm.addEventListener('keydown', (e) => { if (e.key === 'Enter') $('#go').click(); });
 };
 
-/* Home */
 SCREENS.home = function () {
+  ADV = false;
   const p = me(); if (!p) return go('who');
-  const r = rankOf(p.stars);
-  const done = (k) => SETS[k].items.filter((c) => (p.best[k + ':' + c] || 0) > 0).length;
-  const tile = (k) => { const s = SETS[k]; const d = done(k); return `<button class="tile ${s.tile}" data-set="${k}"><div class="big">${s.title}</div><div class="t">Trace ${s.name}</div><div class="s">${d} / ${s.items.length} done</div><div class="bar-p"><i style="width:${(d / s.items.length) * 100}%"></i></div></button>`; };
-  const pos = S.profiles.length > 1 ? `<span class="chip">${['🥇', '🥈', '🥉'][boardPos(p) - 1] || '🏅'} #${boardPos(p)}</span>` : '';
+  const r = rankOf(p.stars), nx = nextRank(p.stars);
+  const d = daily(p);
+  const streak = streakOf(p);
+  const doneCount = (k) => SETS[k].items.filter((c) => (p.best[k + ':' + c] || 0) > 0).length;
+  const nodeIcon = (it) => it.t === 'trace' ? `<span style="font-family:Andika;font-size:.95em;color:${'#2b2350'}">${it.ch}</span>` : GAMES.find((g) => g.id === it.g).e;
+  const nodes = d.items.map((it, i) => `<div class="node ${i < d.done ? 'done' : i === d.done ? 'now' : ''}">${nodeIcon(it)}</div>`).join('');
+  const allDone = d.done >= d.items.length;
+  const greet = allDone ? `You finished today’s adventure, ${p.name}! 🎉` : d.done ? `Let’s keep going, ${p.name}!` : `Hi ${p.name}! Ready for today’s adventure?`;
+  const pos = S.profiles.length > 1 ? `<span class="pill"><span class="ic star">${['🥇', '🥈', '🥉'][boardPos(p) - 1] || '🏅'}</span>#${boardPos(p)}</span>` : '';
   app.innerHTML = `<div class="screen">
     <div class="homehead">
-      <button class="who" data-switch><span class="av">${p.avatar}</span><span class="nm">${esc(p.name)}</span></button>
+      <button class="me-chip" data-switch><span class="avatar" style="--bg:${avBg(p.avatar)}">${p.avatar}</span><span class="nm">${esc(p.name)}</span></button>
       <div class="grow"></div>
-      <span class="chip">⭐ ${p.stars}</span><span class="chip">${r.e} ${r.n}</span>${pos}
+      <span class="pill"><span class="ic fire">🔥</span>${streak}</span>
+      <span class="pill"><span class="ic star">⭐</span>${p.stars}</span>${pos}
     </div>
-    <div class="bubble"><div class="mascot">🦉</div><div class="say">${pick(['What shall we do today?', 'Let’s practise writing!', 'Ready to earn stars?', 'You are doing great!'])}</div></div>
-    <div class="tiles">
-      ${tile('upper')}${tile('lower')}${tile('num')}
-      <button class="tile green" data-games><div class="emo">🎈🧩</div><div class="t">Fun Games</div><div class="s">Pop, count, match &amp; more</div></button>
-      <button class="tile" data-trophy><div class="emo">🏆</div><div class="t">My Stars</div><div class="s">Rank, stickers &amp; star board</div></button>
-    </div>
+    <div class="homegrid"><div>
+      <div class="talk hello">${mascot(allDone ? 'wow' : 'happy')}<div class="bubble">${greet}</div></div>
+      <div class="card quest">
+        <div class="qh"><h3>Today’s Adventure</h3><span class="tag">${Math.min(d.done, 5)} / 5</span></div>
+        <div class="path">${nodes}</div>
+        ${allDone ? '<button class="btn lg sun block" data-adv>Play again for fun ↻</button>' : `<button class="btn lg sun block" data-adv>${d.done ? 'Continue ▶' : 'Start ▶'}</button>`}
+      </div>
+      <button class="card rankbar" data-trophy style="margin-top:18px">
+        <span class="re">${r.e}</span>
+        <span class="rt"><b>${r.n}</b><small>${nx ? `${nx.at - p.stars} more ⭐ to ${nx.e} ${nx.n}` : 'Top rank reached! 👑'}</small>
+          <span class="prog" style="display:block"><i style="width:${nx ? ((p.stars - r.at) / (nx.at - r.at)) * 100 : 100}%"></i></span></span>
+        <span class="chev">›</span>
+      </button>
+    </div><div>
+      <div class="sec"><span class="badge" style="background:var(--grape-l)">✏️</span><h2>Learn to write</h2></div>
+      <div class="learn">${Object.entries(SETS).map(([k, s]) => `<button class="card lcard" data-set="${k}" style="--c:${s.c};--l:${s.l}"><span class="blob"></span>
+        <div class="glyph">${s.title}</div><div class="t">${s.name}</div><div class="bar"><i style="width:${(doneCount(k) / s.items.length) * 100}%"></i></div></button>`).join('')}</div>
+      <div class="sec"><span class="badge" style="background:var(--mint-l)">🎮</span><h2>Play &amp; learn</h2></div>
+      <div class="games">${GAMES.map((g) => `<button class="card gcard" data-g="${g.id}" style="--l:${g.l}"><span class="art">${g.e}</span><span class="t">${g.t}</span>
+        <span class="stars">${starsRow(p.games[g.id] || 0)}</span></button>`).join('')}</div>
+    </div></div>
   </div>`;
   $$('[data-set]', app).forEach((b) => b.onclick = () => { sfx.tap(); go('grid', b.dataset.set); });
-  $('[data-games]', app).onclick = () => { sfx.tap(); go('games'); };
+  $$('[data-g]', app).forEach((b) => b.onclick = () => { sfx.tap(); startGame(b.dataset.g); });
   $('[data-trophy]', app).onclick = () => { sfx.tap(); go('trophy'); };
   $('[data-switch]', app).onclick = () => { sfx.tap(); go('who'); };
+  $('[data-adv]', app).onclick = () => {
+    sfx.tap();
+    if (allDone) { p.daily = null; save(); const nd = daily(p); nd.done = 0; nd.replay = true; save(); }
+    runAdventure();
+  };
   setBack(() => go('who'));
+  setTimeout(() => say(greet.replace(/’/g, "'")), 350);
 };
+function startGame(id) {
+  const g = GAMES.find((x) => x.id === id);
+  if (!g.ask) return go('play_' + id);
+  say('Letters or numbers?');
+  popup(`<div class="hero"><span class="big">${g.e}</span></div><h2>${g.t}</h2><p>What shall we pop?</p>
+    <div class="acts"><button class="btn lg coral" data-k="abc">ABC</button><button class="btn lg sun" data-k="123">123</button></div>`, (el) => {
+    $$('[data-k]', el).forEach((k) => k.onclick = () => { sfx.tap(); go('play_' + id, k.dataset.k); });
+  });
+}
 
-/* Letter / number grid */
 SCREENS.grid = function (setKey) {
+  ADV = false;
   const p = me(); const set = SETS[setKey];
-  const cells = set.items.map((c, i) => {
-    const b = p.best[setKey + ':' + c] || 0;
-    return `<button class="cell ${b ? 'done' : ''}" data-i="${i}" style="--c:${set.color}"><span class="ch">${c}</span><span class="stars">${starsRow(b)}</span></button>`;
-  }).join('');
+  const firstNew = set.items.find((c) => !(p.tries[setKey + ':' + c]));
   app.innerHTML = `<div class="screen">
-    <div class="bar">${backBtn()}<h1>Trace ${set.name}</h1><span class="chip">⭐ ${p.stars}</span></div>
-    <div class="modes">${Object.entries(MODES).map(([k, m]) => `<button data-m="${k}" class="${S.mode === k ? 'on' : ''}">${m.label}</button>`).join('')}</div>
-    <div class="grid">${cells}</div>
+    <div class="topbar">${backBtn()}<h1>${set.name}</h1><span class="pill"><span class="ic star">⭐</span>${p.stars}</span></div>
+    <div class="modes" style="width:max-content">${Object.entries(MODES).map(([k, m]) => `<button data-m="${k}" class="${S.mode === k ? 'on' : ''}">${m.label}</button>`).join('')}</div>
+    <div class="modehint" id="mh">${MODES[S.mode].hint}</div>
+    <div class="grid">${set.items.map((c, i) => {
+      const b = p.best[setKey + ':' + c] || 0;
+      return `<button class="card cell ${b === 3 ? 'perfect' : ''}" data-i="${i}" style="--c:${set.c}">${c === firstNew ? '<span class="new">NEW</span>' : ''}<span class="ch">${c}</span><span class="stars">${starsRow(b)}</span></button>`;
+    }).join('')}</div>
   </div>`;
   setBack(() => go('home'));
-  $$('[data-m]', app).forEach((b) => b.onclick = () => { S.mode = b.dataset.m; save(); sfx.tap(); $$('[data-m]', app).forEach((x) => x.classList.toggle('on', x === b)); say(MODES[S.mode].hint); });
+  $$('[data-m]', app).forEach((b) => b.onclick = () => {
+    S.mode = b.dataset.m; save(); sfx.tap();
+    $$('[data-m]', app).forEach((x) => x.classList.toggle('on', x === b));
+    $('#mh').textContent = MODES[S.mode].hint; say(MODES[S.mode].hint.replace('—', ','));
+  });
   $$('[data-i]', app).forEach((b) => b.onclick = () => { sfx.tap(); go('trace', setKey, +b.dataset.i); });
 };
 
-/* ------------------------------------------------------- tracing engine */
-const GLYPH_FONT = '"Andika", "Fredoka", sans-serif';
-/** Draw `ch` into ctx (in an S×S box). extra = outline thickness added around the glyph. */
-function glyphMetrics(ctx, ch, size) {
-  let fs = size * 0.78;
-  ctx.font = `700 ${fs}px ${GLYPH_FONT}`;
-  const w = ctx.measureText(ch).width;
-  if (w > size * 0.84) fs *= (size * 0.84) / w;
-  ctx.font = `700 ${fs}px ${GLYPH_FONT}`;
-  const cap = ctx.measureText('H').actualBoundingBoxAscent || fs * 0.68;
-  const xh = ctx.measureText('x').actualBoundingBoxAscent || fs * 0.48;
-  const base = size * 0.47 + cap * 0.5;
-  return { fs, base, cap, xh };
-}
-function drawGlyph(ctx, ch, size, extra, style) {
-  const m = glyphMetrics(ctx, ch, size);
-  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  ctx.fillStyle = style; ctx.strokeStyle = style;
-  ctx.fillText(ch, size / 2, m.base);
-  if (extra > 0) { ctx.lineWidth = extra; ctx.strokeText(ch, size / 2, m.base); }
-  return m;
-}
-function maskOf(drawFn, N) {
-  const c = document.createElement('canvas'); c.width = c.height = N;
-  const g = c.getContext('2d', { willReadFrequently: true });
-  drawFn(g);
-  const d = g.getImageData(0, 0, N, N).data;
-  const m = new Uint8Array(N * N);
-  for (let i = 0; i < N * N; i++) m[i] = d[i * 4 + 3] > 100 ? 1 : 0;
-  return m;
+/* ================================================================== tracing engine */
+const SVGNS = 'http://www.w3.org/2000/svg';
+const measurer = (() => { const s = document.createElementNS(SVGNS, 'svg'); s.setAttribute('width', '0'); s.setAttribute('height', '0'); s.style.position = 'absolute';
+  const pth = document.createElementNS(SVGNS, 'path'); s.appendChild(pth); document.body.appendChild(s); return pth; })();
+const sampleCache = {};
+/** Points every ~2 units along each stroke of a glyph, in glyph units. */
+function glyphSamples(ch) {
+  if (sampleCache[ch]) return sampleCache[ch];
+  const out = GLYPHS[ch].map((d) => {
+    measurer.setAttribute('d', d);
+    const len = measurer.getTotalLength();
+    const n = Math.max(2, Math.ceil(len / 2) + 1);
+    const pts = [];
+    for (let i = 0; i < n; i++) { const q = measurer.getPointAtLength((len * i) / (n - 1)); pts.push([q.x, q.y]); }
+    return pts;
+  });
+  sampleCache[ch] = out;
+  return out;
 }
 
 SCREENS.trace = function (setKey, idx) {
   const p = me(); const set = SETS[setKey];
   const ch = set.items[idx];
+  const key = setKey + ':' + ch;
   const mode = S.mode || 'easy';
   const isNum = setKey === 'num';
   const word = isNum ? null : WORDS[ch.toUpperCase()];
-  const label = isNum ? `${ch} — ${NUM_WORDS[+ch]}` : `${ch} for ${word[0]}`;
-  const emo = isNum ? (+ch === 0 ? '⭕' : COUNT_EMO[+ch % COUNT_EMO.length].repeat(Math.min(+ch, 5))) : word[1];
-  let color = S.crayon || CRAYONS[0];
+  const pic = isNum ? (+ch === 0 ? '⭕' : COUNT_EMO[+ch % COUNT_EMO.length]) : word[1];
+  const label = isNum ? `<b>${ch}</b> &nbsp;${NUM_WORDS[+ch]}` : `<b>${ch}</b> for ${word[0]}`;
+  const paths = GLYPHS[ch].map((d) => new Path2D(d));
+  const samples = glyphSamples(ch);
+  const nS = samples.length;
+  const TOL = mode === 'magic' ? 14 : 11, LOOK = 9;
+  let color = S.crayon && CRAYONS.includes(S.crayon) ? S.crayon : CRAYONS[0];
 
-  app.innerHTML = `<div class="screen trace">
-    <div class="bar">${backBtn()}<div class="tword"><span class="e">${emo}</span><span class="w">${esc(label)}</span></div>
-      <button class="round" data-say aria-label="Hear it">${ICON.speak}</button></div>
+  app.innerHTML = `<div class="screen fit trace">
+    <div class="topbar">${backBtn()}<div class="word"><span class="pic">${pic}</span><span class="w">${label}</span></div>
+      <button class="icon-btn" data-say aria-label="Hear it">${ICON.speak}</button></div>
     <div class="stage">
-      <button class="round" data-prev aria-label="Previous">${ICON.prev}</button>
-      <div class="board" id="board"><canvas class="guide" id="gc"></canvas><canvas id="ic"></canvas><div class="meter"><i id="meter"></i></div></div>
-      <button class="round" data-next aria-label="Next">${ICON.next}</button>
+      <button class="icon-btn side" data-prev aria-label="Previous">${ICON.prev}</button>
+      <div class="board" id="board">
+        <canvas class="road" id="rc"></canvas><canvas id="dc"></canvas><canvas id="ic"></canvas>
+        <div class="arrow hide" id="arrow"><svg viewBox="0 0 30 30"><path d="M8 6 L22 15 L8 24" fill="none" stroke="#2ecc9a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <div class="startdot hide" id="sd">1</div>
+        <div class="hand" id="hand">👆</div>
+        <div class="steps">${'<i></i>'.repeat(nS)}</div>
+      </div>
+      <button class="icon-btn side" data-next aria-label="Next">${ICON.next}</button>
     </div>
     <div class="tools">
-      <div class="crayons">${CRAYONS.map((c) => `<button data-c="${c}" style="--c:${c}" class="${c === color ? 'on' : ''}" aria-label="Crayon"></button>`).join('')}</div>
-      <button class="round" data-clear aria-label="Clear">${ICON.clear}</button>
-      ${mode === 'magic' ? `<button class="round" data-peek aria-label="Peek">${ICON.eye}</button>` : ''}
-      <button class="btn green big" data-done>Done ✓</button>
+      <div class="crayons">${CRAYONS.map((c) => `<button class="crayon ${c === color ? 'on' : ''}" data-c="${c}" style="--c:${c}" aria-label="Crayon"></button>`).join('')}</div>
+      <button class="icon-btn" data-watch aria-label="Watch me">${ICON.watch}</button>
+      <button class="icon-btn" data-redo aria-label="Start again">${ICON.redo}</button>
     </div>
   </div>`;
-  setBack(() => go('grid', setKey));
+  setBack(() => { if (ADV) { ADV = false; go('home'); } else go('grid', setKey); });
 
-  const board = $('#board'), gc = $('#gc'), ic = $('#ic'), meter = $('#meter');
-  const gctx = gc.getContext('2d'), ictx = ic.getContext('2d');
-  const N = 140; // analysis resolution
-  let size = 300, dpr = 1;
-  let strokes = [];  // [{c, pts:[[x,y] normalised]}]
-  let cur = null, activeId = null;
-  let tMask, dMask, tCount = 1;
-  let finished = false, magicTimer = 0, lastSpark = 0, lastTick = 0;
+  const board = $('#board'), rc = $('#rc'), dc = $('#dc'), ic = $('#ic');
+  const rctx = rc.getContext('2d'), dctx = dc.getContext('2d'), ictx = ic.getContext('2d');
+  const sd = $('#sd'), arrow = $('#arrow'), hand = $('#hand');
+  let W = 300, H = 300, dpr = 1, u = 3, tx = 0, ty = 0;
+  let ink = [];                 // [{c, pts:[[ux,uy]...]}] in glyph units
+  let curInk = null, activeId = null, lastU = null;
+  let cur = 0; const ptr = new Array(nS).fill(0);
+  let inkTotal = 0, inkGood = 0, misses = 0, gained = 0;
+  let busy = false, finished = false, lastSpark = 0, demoRaf = 0;
 
+  const toPx = (x, y) => [tx + x * u, ty + y * u];
   function layout() {
     const stage = $('.stage', app);
-    const arrows = innerWidth > 560 ? 150 : 0;
-    size = Math.floor(Math.max(200, Math.min(stage.clientWidth - arrows, stage.clientHeight - 4, 720)));
+    const sideW = innerWidth > 560 ? 150 : 0;
+    // square on tablets / landscape, a little taller on portrait phones so letters can be bigger
+    W = Math.floor(Math.max(220, Math.min(stage.clientWidth - sideW, 760)));
+    H = Math.floor(Math.max(220, Math.min(stage.clientHeight - 6, W * 1.3)));
+    if (H < W) W = H;
     dpr = Math.min(3, devicePixelRatio || 1);
-    board.style.width = board.style.height = size + 'px';
-    for (const c of [gc, ic]) { c.width = c.height = Math.round(size * dpr); }
-    drawGuide(); redrawInk();
+    board.style.width = W + 'px'; board.style.height = H + 'px';
+    for (const c of [rc, dc, ic]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+    u = Math.min(W / 98, H / 104); tx = W / 2 - 50 * u; ty = H / 2 - 60 * u;
+    drawRoad(); drawDone(); drawInk(); placeStart();
   }
-  function drawGuide() {
-    const g = gctx; g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, size, size);
-    const m = glyphMetrics(g, ch, size);
-    // notebook writing lines
-    g.lineWidth = 2; g.strokeStyle = '#d8cffa';
-    const line = (y, dash) => { g.setLineDash(dash ? [10, 10] : []); g.beginPath(); g.moveTo(16, y); g.lineTo(size - 16, y); g.stroke(); };
-    line(m.base - m.cap, true); line(m.base - m.xh, true); g.strokeStyle = '#ffb3cd'; g.lineWidth = 3; line(m.base, false); g.setLineDash([]);
-    const thick = m.fs * 0.05;
+  function inUnits(ctx) { ctx.setTransform(dpr * u, 0, 0, dpr * u, dpr * tx, dpr * ty); ctx.lineCap = 'round'; ctx.lineJoin = 'round'; }
+  function drawRoad() {
+    const g = rctx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, rc.width, rc.height);
+    inUnits(g);
+    // writing lines (top, middle dashed; base line solid)
+    const line = (y, col, w, dash) => { g.setLineDash(dash || []); g.strokeStyle = col; g.lineWidth = w; g.beginPath(); g.moveTo(-tx / u + 6, y); g.lineTo((W - tx) / u - 6, y); g.stroke(); };
+    line(20, '#ddd5fb', 0.6, [2.5, 2.5]); line(50, '#ddd5fb', 0.6, [2.5, 2.5]); line(80, '#ffb4c2', 0.9); g.setLineDash([]);
     if (mode === 'dots') {
-      // dotted letter: dots laid out inside the glyph shape
-      const o = document.createElement('canvas'); o.width = o.height = Math.round(size * dpr);
-      const oc = o.getContext('2d'); oc.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawGlyph(oc, ch, size, thick, '#000');
-      oc.globalCompositeOperation = 'source-in';
-      const step = Math.max(9, m.fs * 0.055), r = step * 0.3;
-      oc.fillStyle = '#9b86ff'; oc.beginPath();
-      for (let y = step / 2; y < size; y += step) for (let x = step / 2; x < size; x += step) { oc.moveTo(x + r, y); oc.arc(x, y, r, 0, 7); }
-      oc.fill();
-      g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(o, 0, 0);
-    } else {
-      // soft filled letter with an outline ring
-      const o = document.createElement('canvas'); o.width = o.height = Math.round(size * dpr);
-      const oc = o.getContext('2d'); oc.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawGlyph(oc, ch, size, thick + 8, '#c9bcff');
-      oc.globalCompositeOperation = 'destination-out'; drawGlyph(oc, ch, size, thick, '#000');
-      oc.globalCompositeOperation = 'destination-over'; drawGlyph(oc, ch, size, thick, '#efeaff');
-      g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(o, 0, 0);
+      g.fillStyle = '#a28ff7';
+      samples.forEach((pts, i) => { for (let j = 0; j < pts.length; j += 2) { g.beginPath(); g.arc(pts[j][0], pts[j][1], i === cur ? 1.9 : 1.6, 0, 7); g.fill(); } });
+      return;
     }
-    // analysis masks (resolution independent)
-    tMask = maskOf((c) => { c.scale(N / size, N / size); drawGlyph(c, ch, size, 0, '#000'); }, N);
-    dMask = maskOf((c) => { c.scale(N / size, N / size); drawGlyph(c, ch, size, m.fs * 0.24, '#000'); }, N);
-    tCount = Math.max(1, tMask.reduce((a, b) => a + b, 0));
-    brush = m.fs * 0.125;
+    for (const p2 of paths) { g.strokeStyle = '#ddd3fc'; g.lineWidth = 17; g.stroke(p2); }
+    for (const p2 of paths) { g.strokeStyle = '#f5f1ff'; g.lineWidth = 13; g.stroke(p2); }
+    g.setLineDash([2.6, 3.4]); g.strokeStyle = '#b9a8f6'; g.lineWidth = 1.3;
+    for (const p2 of paths) g.stroke(p2);
+    g.setLineDash([]);
   }
-  let brush = 30;
-  function strokePath(c, s, scale) {
-    c.strokeStyle = s.c; c.fillStyle = s.c; c.lineWidth = brush * scale; c.lineCap = 'round'; c.lineJoin = 'round';
-    const pts = s.pts;
-    if (pts.length === 1) { c.beginPath(); c.arc(pts[0][0] * size * scale, pts[0][1] * size * scale, brush * scale / 2, 0, 7); c.fill(); return; }
-    c.beginPath(); c.moveTo(pts[0][0] * size * scale, pts[0][1] * size * scale);
-    for (let i = 1; i < pts.length; i++) c.lineTo(pts[i][0] * size * scale, pts[i][1] * size * scale);
-    c.stroke();
+  function drawDone() {
+    const g = dctx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, dc.width, dc.height);
+    inUnits(g);
+    for (let i = 0; i < cur && i < nS; i++) { g.strokeStyle = color + '40'; g.lineWidth = 15; g.stroke(paths[i]); }
   }
-  function redrawInk() {
-    ictx.setTransform(dpr, 0, 0, dpr, 0, 0); ictx.clearRect(0, 0, size, size);
-    for (const s of strokes) strokePath(ictx, s, 1);
+  function strokeInk(g, s) {
+    g.strokeStyle = s.c; g.fillStyle = s.c; g.lineWidth = 9.5;
+    if (s.pts.length === 1) { g.beginPath(); g.arc(s.pts[0][0], s.pts[0][1], 4.75, 0, 7); g.fill(); return; }
+    g.beginPath(); g.moveTo(s.pts[0][0], s.pts[0][1]);
+    for (let i = 1; i < s.pts.length; i++) g.lineTo(s.pts[i][0], s.pts[i][1]);
+    g.stroke();
   }
-  function evaluate() {
-    const u = maskOf((c) => { for (const s of strokes) strokePath(c, s, N / size); }, N);
-    let hit = 0, ink = 0, inside = 0;
-    for (let i = 0; i < N * N; i++) {
-      if (u[i]) { ink++; if (dMask[i]) inside++; if (tMask[i]) hit++; }
-    }
-    const coverage = hit / tCount;
-    const precision = ink ? inside / ink : 0;
-    return { coverage, precision };
-  }
-  function updateMeter() {
-    const { coverage, precision } = evaluate();
-    meter.style.width = Math.min(100, (coverage / 0.85) * 100) + '%';
-    return { coverage, precision };
+  function drawInk() { const g = ictx; g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, ic.width, ic.height); inUnits(g); ink.forEach((s) => strokeInk(g, s)); }
+  function placeStart() {
+    $$('.steps i', board).forEach((el, i) => el.classList.toggle('on', i < cur));
+    if (cur >= nS) { sd.classList.add('hide'); arrow.classList.add('hide'); return; }
+    const pts = samples[cur];
+    const [x, y] = toPx(pts[0][0], pts[0][1]);
+    sd.textContent = cur + 1; sd.style.left = x + 'px'; sd.style.top = y + 'px';
+    sd.classList.remove('hide');
+    if (pts.length > 6) {
+      const k = Math.min(pts.length - 1, 9), k0 = Math.max(0, k - 2);
+      const [ax, ay] = toPx(pts[k][0], pts[k][1]);
+      const ang = Math.atan2(pts[k][1] - pts[k0][1], pts[k][0] - pts[k0][0]);
+      arrow.style.left = ax + 'px'; arrow.style.top = ay + 'px'; arrow.style.transform = `rotate(${ang}rad)`;
+      arrow.classList.toggle('hide', mode === 'magic');
+    } else arrow.classList.add('hide');
+    if (mode === 'dots') drawRoad();
   }
 
-  function pos(e) { const r = ic.getBoundingClientRect(); return [(e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height]; }
+  /* --- demo: a finger shows how to write it, stroke by stroke */
+  function demo(then) {
+    if (busy) return;
+    busy = true; cancelAnimationFrame(demoRaf);
+    rc.classList.remove('hide');
+    const g = ictx; let s = 0, t0 = performance.now();
+    const durOf = (pts) => Math.min(1500, Math.max(500, pts.length * 22));
+    hand.classList.add('on');
+    const step = (now) => {
+      if (s >= nS) {
+        hand.classList.remove('on'); busy = false; drawInk();
+        if (mode === 'magic') setTimeout(() => { if (!finished) rc.classList.add('hide'); }, 900);
+        then && then(); return;
+      }
+      const pts = samples[s], k = Math.min(1, (now - t0) / durOf(pts));
+      const n = Math.max(1, Math.round(k * (pts.length - 1)));
+      drawInk(); inUnits(g);
+      for (let i = 0; i <= s; i++) {
+        const P = i < s ? samples[i] : pts.slice(0, n + 1);
+        g.strokeStyle = 'rgba(255,184,31,.9)'; g.lineWidth = 6; g.beginPath(); g.moveTo(P[0][0], P[0][1]); P.forEach((q) => g.lineTo(q[0], q[1])); g.stroke();
+      }
+      const [hx, hy] = toPx(pts[n][0], pts[n][1]);
+      hand.style.transform = `translate(${hx}px, ${hy}px)`;
+      if (k >= 1) { s++; t0 = now + 250; }
+      demoRaf = requestAnimationFrame(step);
+    };
+    demoRaf = requestAnimationFrame(step);
+  }
+
+  /* --- following the road */
+  function feedPoint(x, y) {
+    // neatness: is this ink near any part of the letter?
+    inkTotal++;
+    let near = false;
+    for (const pts of samples) { for (const q of pts) { const dx = q[0] - x, dy = q[1] - y; if (dx * dx + dy * dy <= TOL * TOL * 1.3) { near = true; break; } } if (near) break; }
+    if (near) inkGood++;
+    if (cur >= nS) return;
+    const pts = samples[cur]; const from = ptr[cur]; const lim = Math.min(pts.length - 1, from + LOOK);
+    let best = -1;
+    for (let j = from; j <= lim; j++) { const dx = pts[j][0] - x, dy = pts[j][1] - y; if (dx * dx + dy * dy <= TOL * TOL) best = j; }
+    if (best < 0) return;
+    gained += best + 1 - from; ptr[cur] = best + 1;
+    if (ptr[cur] >= pts.length - 1) strokeDone();
+  }
+  function strokeDone() {
+    cur++;
+    sfx.stroke();
+    drawDone(); placeStart();
+    if (cur >= nS) setTimeout(finish, 350);
+    else if (mode !== 'magic') say(pick(['Good!', 'Yes!', 'Now number ' + (cur + 1), 'Great!']));
+  }
+  function toUnits(e) { const r = ic.getBoundingClientRect(); return [((e.clientX - r.left) * (W / r.width) - tx) / u, ((e.clientY - r.top) * (H / r.height) - ty) / u]; }
   function sparkle(e) {
     const now = performance.now(); if (now - lastSpark < 90) return; lastSpark = now;
-    const s = document.createElement('div'); s.className = 'spark'; s.textContent = pick(['✨', '⭐', '💫']);
-    s.style.left = e.clientX - 11 + 'px'; s.style.top = e.clientY - 11 + 'px';
-    s.style.setProperty('--dx', (Math.random() - 0.5) * 80 + 'px'); s.style.setProperty('--dy', -Math.random() * 60 - 20 + 'px');
-    document.body.appendChild(s); setTimeout(() => s.remove(), 700);
+    const el = document.createElement('div'); el.className = 'spark'; el.textContent = pick(['✨', '⭐', '💫']);
+    el.style.left = e.clientX - 10 + 'px'; el.style.top = e.clientY - 10 + 'px';
+    el.style.setProperty('--dx', (Math.random() - 0.5) * 80 + 'px'); el.style.setProperty('--dy', -Math.random() * 60 - 20 + 'px');
+    document.body.appendChild(el); setTimeout(() => el.remove(), 700);
   }
   ic.addEventListener('pointerdown', (e) => {
-    if (finished || activeId !== null) return;
+    if (finished || busy || activeId !== null) return;
     e.preventDefault(); actx();
     activeId = e.pointerId; try { ic.setPointerCapture(e.pointerId); } catch (x) { /* ignore */ }
-    cur = { c: color, pts: [pos(e)] }; strokes.push(cur);
-    ictx.setTransform(dpr, 0, 0, dpr, 0, 0); strokePath(ictx, cur, 1);
-    if (mode === 'magic') gc.classList.add('hide');
+    const pt = toUnits(e);
+    curInk = { c: color, pts: [pt] }; ink.push(curInk); lastU = pt; gained = 0;
+    inUnits(ictx); strokeInk(ictx, curInk);
+    feedPoint(pt[0], pt[1]);
   });
   ic.addEventListener('pointermove', (e) => {
-    if (e.pointerId !== activeId || !cur) return;
-    const evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-    for (const ev of evs.length ? evs : [e]) {
-      const pt = pos(ev), last = cur.pts[cur.pts.length - 1];
-      ictx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ictx.strokeStyle = cur.c; ictx.lineWidth = brush; ictx.lineCap = 'round';
-      ictx.beginPath(); ictx.moveTo(last[0] * size, last[1] * size); ictx.lineTo(pt[0] * size, pt[1] * size); ictx.stroke();
-      cur.pts.push(pt);
+    if (e.pointerId !== activeId || !curInk) return;
+    const evs = (e.getCoalescedEvents && e.getCoalescedEvents().length) ? e.getCoalescedEvents() : [e];
+    inUnits(ictx); ictx.strokeStyle = curInk.c; ictx.lineWidth = 9.5;
+    for (const ev of evs) {
+      const pt = toUnits(ev);
+      ictx.beginPath(); ictx.moveTo(lastU[0], lastU[1]); ictx.lineTo(pt[0], pt[1]); ictx.stroke();
+      // walk in small steps so fast fingers still follow the road
+      const dx = pt[0] - lastU[0], dy = pt[1] - lastU[1], steps = Math.max(1, Math.ceil(Math.hypot(dx, dy) / 2));
+      for (let i = 1; i <= steps; i++) feedPoint(lastU[0] + (dx * i) / steps, lastU[1] + (dy * i) / steps);
+      curInk.pts.push(pt); lastU = pt;
     }
     sparkle(e);
-    const now = performance.now(); if (now - lastTick > 120) { lastTick = now; sfx.draw(); }
   });
   const end = (e) => {
     if (e.pointerId !== activeId) return;
-    activeId = null; cur = null;
-    const r = updateMeter();
-    if (r.coverage >= 0.86 && r.precision >= 0.7) setTimeout(() => { if (activeId === null) finish(); }, 450);
+    activeId = null;
+    const s = curInk; curInk = null;
+    if (finished || !s) return;
+    // a long scribble that barely moved along the road = wrong start or wrong direction
+    let inkLen = 0; for (let i = 1; i < s.pts.length; i++) inkLen += Math.hypot(s.pts[i][0] - s.pts[i - 1][0], s.pts[i][1] - s.pts[i - 1][1]);
+    if (inkLen > 12 && gained * 2 < inkLen * 0.4 && cur < nS) {
+      misses++;
+      sfx.soft();
+      board.classList.remove('wiggle'); void board.offsetWidth; board.classList.add('wiggle');
+      say(`Start at the green dot, and follow the arrow!`);
+      if (mode === 'magic' && misses >= 2) { rc.classList.remove('hide'); setTimeout(() => { if (!finished) rc.classList.add('hide'); }, 1600); }
+    }
   };
   ic.addEventListener('pointerup', end); ic.addEventListener('pointercancel', end);
 
+  function reset() {
+    ink = []; cur = 0; ptr.fill(0); inkTotal = inkGood = misses = 0; finished = false;
+    drawDone(); drawInk(); placeStart();
+  }
+
+  /* --- finishing + stars */
   function finish() {
     if (finished) return;
-    const { coverage, precision } = evaluate();
-    if (!strokes.length || coverage < 0.25) {
-      board.classList.remove('wiggle'); void board.offsetWidth; board.classList.add('wiggle');
-      sfx.bad(); say(strokes.length ? `Keep going! Trace all of ${spoken(ch)}.` : `Use your finger to trace ${spoken(ch)}!`);
-      if (mode === 'magic') peek();
-      return;
-    }
     finished = true;
-    // how much of the letter was traced × how neatly the ink stayed on the letter
-    const q = Math.min(1, coverage / 0.85) * Math.pow(precision, 0.8);
-    window.__lastTrace = { coverage, precision, q };
-    const stars = q >= 0.78 ? 3 : q >= 0.55 ? 2 : 1;
+    rc.classList.remove('hide');
+    const neat = inkTotal ? inkGood / inkTotal : 1;
+    const stars = neat >= 0.85 && misses <= 1 ? 3 : neat >= 0.65 && misses <= 3 ? 2 : 1;
     const bonus = mode === 'magic' && stars === 3 ? 1 : 0;
-    const key = setKey + ':' + ch;
-    const prevBest = p.best[key] || 0;
-    p.best[key] = Math.max(prevBest, stars);
+    window.__lastTrace = { neat, misses, stars };
+    p.best[key] = Math.max(p.best[key] || 0, stars);
     p.tries[key] = (p.tries[key] || 0) + 1;
     p.lastPlayed = Date.now();
     const parties = addStars(stars + bonus);
-    showResult(stars, bonus, parties);
-  }
-  function showResult(stars, bonus, parties) {
+    const next = afterActivity('Next ➜', () => go('trace', setKey, (idx + 1) % set.items.length));
+    // picture of what the child wrote
+    const snapC = document.createElement('canvas'); snapC.width = snapC.height = 220;
+    const sg = snapC.getContext('2d'); sg.fillStyle = '#f8f5ff'; sg.fillRect(0, 0, 220, 220); const side = Math.min(dc.width, dc.height), ox = (dc.width - side) / 2, oy = (dc.height - side) / 2;
+    for (const c of [dc, ic]) sg.drawImage(c, ox, oy, side, side, 0, 0, 220, 220);
+    const snap = snapC.toDataURL('image/png');
     const praise = pick(PRAISE[stars]);
-    const snap = ic.toDataURL('image/png');
-    const el = popup(`<h2>${praise}</h2>
-      <div class="bigstars"><span>⭐</span><span>⭐</span><span>⭐</span></div>
-      <img class="mini" src="${snap}" alt="Your writing" style="background:#f8f5ff">
-      <p>${bonus ? '✨ Magic bonus: +1 star! ' : ''}You got <b>${stars + bonus}</b> star${stars + bonus > 1 ? 's' : ''}!</p>
-      <div class="acts"><button class="btn white" data-again>↻ Again</button><button class="btn big" data-nx>Next ➜</button></div>`, (el) => {
-      $('[data-again]', el).onclick = () => { sfx.tap(); go('trace', setKey, idx); };
-      $('[data-nx]', el).onclick = () => { sfx.tap(); nextItem(); };
-    });
-    const spans = $$('.bigstars span', el);
-    spans.forEach((s, i) => { if (i < stars) setTimeout(() => { s.classList.add('on'); sfx.star(i); }, 350 + i * 380); });
+    const show = (animate) => {
+      const el = popup(`<div class="hero">${mascot(stars === 3 ? 'wow' : 'happy', stars === 3 ? 'cheer' : '')}</div>
+        <h2>${praise}</h2>
+        <div class="bigstars">${[0, 1, 2].map((i) => `<span class="${!animate && i < stars ? 'on' : ''}">⭐</span>`).join('')}</div>
+        <img class="snap" src="${snap}" alt="What you wrote">
+        <p>${bonus ? '✨ Memory bonus! ' : ''}+${stars + bonus} star${stars + bonus > 1 ? 's' : ''}</p>
+        <div class="acts"><button class="btn ghost" data-again>↻ Again</button><button class="btn lg" data-nx>${next.label}</button></div>`, (el) => {
+        $('[data-again]', el).onclick = () => { sfx.tap(); go('trace', setKey, idx); };
+        $('[data-nx]', el).onclick = () => { sfx.tap(); next.run(); };
+      });
+      if (animate) $$('.bigstars span', el).forEach((s, i) => { if (i < stars) setTimeout(() => { s.classList.add('on'); sfx.star(i); }, 350 + i * 380); });
+    };
+    show(true);
     setTimeout(() => {
-      if (stars === 3) { confetti(); }
-      say(`${praise} ${isNum ? describe(ch) : describe(ch)}!`);
-      if (parties.length) setTimeout(() => celebrate(parties, () => showResult2(stars, bonus)), 1500);
+      if (stars === 3) confetti();
+      say(`${praise} ${describe(ch)}!`);
+      if (parties.length) setTimeout(() => celebrate(parties, () => show(false)), 1500);
     }, 350 + stars * 380);
   }
-  // re-show result card (without re-awarding) after celebrations
-  function showResult2(stars, bonus) {
-    popup(`<h2>${pick(PRAISE[stars])}</h2><div class="bigstars">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}">⭐</span>`).join('')}</div>
-      <p>You got <b>${stars + bonus}</b> star${stars + bonus > 1 ? 's' : ''}!</p>
-      <div class="acts"><button class="btn white" data-again>↻ Again</button><button class="btn big" data-nx>Next ➜</button></div>`, (el) => {
-      $('[data-again]', el).onclick = () => { sfx.tap(); go('trace', setKey, idx); };
-      $('[data-nx]', el).onclick = () => { sfx.tap(); nextItem(); };
-    });
-  }
-  function nextItem() { go('trace', setKey, (idx + 1) % set.items.length); }
-  function peek() { gc.classList.remove('hide'); clearTimeout(magicTimer); magicTimer = setTimeout(() => gc.classList.add('hide'), 1400); }
 
-  $$('[data-c]', app).forEach((b) => b.onclick = () => { color = S.crayon = b.dataset.c; save(); sfx.pop(); $$('[data-c]', app).forEach((x) => x.classList.toggle('on', x === b)); });
-  $('[data-clear]', app).onclick = () => { sfx.tap(); strokes = []; redrawInk(); meter.style.width = '0'; if (mode === 'magic') peek(); };
-  $('[data-done]', app).onclick = () => { sfx.tap(); finish(); };
+  /* --- buttons */
+  $$('[data-c]', app).forEach((b) => b.onclick = () => { color = S.crayon = b.dataset.c; save(); sfx.pop(); $$('[data-c]', app).forEach((x) => x.classList.toggle('on', x === b)); drawDone(); });
+  $('[data-redo]', app).onclick = () => { sfx.tap(); reset(); if (mode === 'magic') demo(); };
+  $('[data-watch]', app).onclick = () => { sfx.tap(); say('Watch me!'); demo(); };
   $('[data-say]', app).onclick = () => { sfx.tap(); say(describe(ch)); };
   $('[data-prev]', app).onclick = () => { sfx.tap(); go('trace', setKey, (idx - 1 + set.items.length) % set.items.length); };
-  $('[data-next]', app).onclick = () => { sfx.tap(); nextItem(); };
-  const peekBtn = $('[data-peek]', app); if (peekBtn) peekBtn.onclick = () => { sfx.tap(); peek(); };
+  $('[data-next]', app).onclick = () => { sfx.tap(); go('trace', setKey, (idx + 1) % set.items.length); };
 
-  const onResize = () => { if (!finished) layout(); };
+  const onResize = () => { if (!busy) layout(); };
   addEventListener('resize', onResize);
-  onCleanup(() => { removeEventListener('resize', onResize); clearTimeout(magicTimer); });
+  onCleanup(() => { removeEventListener('resize', onResize); cancelAnimationFrame(demoRaf); });
 
   fontsReady.then(() => {
     layout();
-    say(`${mode === 'magic' ? 'Look carefully. Now write' : 'Trace'} ${describe(ch)}`);
-    if (mode === 'magic') magicTimer = setTimeout(() => gc.classList.add('hide'), 2600);
+    const firstTime = !(p.tries[key] > 0);
+    if (mode === 'magic') { say(`Watch carefully, then write ${describe(ch)} by yourself!`); setTimeout(() => demo(), 600); }
+    else if (firstTime && mode === 'easy') { say(`${describe(ch)}. Watch me first!`); setTimeout(() => demo(() => say('Your turn! Start at the green dot.')), 900); }
+    else say(`${mode === 'dots' ? 'Join the dots for' : 'Trace'} ${describe(ch)}. Start at the green dot!`);
   });
 };
 
-/* ------------------------------------------------------------------ games */
-const GAMES = [
-  { id: 'balloon', e: '🎈', t: 'Balloon Pop', s: 'Pop the right letter or number', tile: 'pink', pick: true },
-  { id: 'count', e: '🍎', t: 'Count & Tap', s: 'How many can you see?', tile: 'orange' },
-  { id: 'picture', e: '🐘', t: 'Picture Match', s: 'Which one starts with…?', tile: 'blue' },
-  { id: 'next', e: '🧩', t: 'What Comes Next?', s: 'Finish the pattern', tile: 'green' },
-  { id: 'pair', e: '🔠', t: 'Big & Small', s: 'Match A with a', tile: 'yellow' },
-];
-const ROUNDS = 8;
-
-SCREENS.games = function () {
-  const p = me();
-  app.innerHTML = `<div class="screen">
-    <div class="bar">${backBtn()}<h1>Fun Games</h1><span class="chip">⭐ ${p.stars}</span></div>
-    <div class="tiles">${GAMES.map((g) => `<button class="tile ${g.tile}" data-g="${g.id}"><div class="emo">${g.e}</div><div class="t">${g.t}</div><div class="s">${g.s}</div><div class="s" style="margin-top:6px">${starsRow(p.games[g.id] || 0).replace(/<b>★<\/b>/g, '⭐').replace(/★/g, '☆')}</div></button>`).join('')}</div>
-  </div>`;
-  setBack(() => go('home'));
-  $$('[data-g]', app).forEach((b) => b.onclick = () => {
-    sfx.tap();
-    const g = GAMES.find((x) => x.id === b.dataset.g);
-    if (g.pick) {
-      say('Letters or numbers?');
-      popup(`<div class="big-emo">${g.e}</div><h2>${g.t}</h2><p>What do you want to pop?</p>
-        <div class="acts"><button class="btn big pink" data-k="abc">ABC</button><button class="btn big yellow" data-k="123">123</button></div>`, (el) => {
-        $$('[data-k]', el).forEach((k) => k.onclick = () => { sfx.tap(); go('play_' + g.id, k.dataset.k); });
-      });
-    } else go('play_' + g.id);
-  });
-};
-
-/** Shared game frame: progress dots + end-of-game scoring. */
+/* ================================================================== games */
 function gameFrame(id, title, body) {
-  app.innerHTML = `<div class="screen" style="height:100vh;height:100dvh;overflow:hidden">
-    <div class="gamebar">${backBtn()}<div class="prog">${'<i></i>'.repeat(ROUNDS)}</div><span class="chip" id="gs">⭐ ${me().stars}</span></div>
+  app.innerHTML = `<div class="screen fit">
+    <div class="gtop">${backBtn()}<div class="track"><i id="trk"></i></div><span class="pill"><span class="ic star">⭐</span>${me().stars}</span></div>
     ${body}</div>`;
-  setBack(() => go('games'));
+  setBack(() => { ADV = false; go('home'); });
   let score = 0, misses = 0;
   return {
-    get score() { return score; },
-    right() { score++; const d = $$('.prog i', app)[score - 1]; if (d) d.classList.add('on'); sfx.good(); return score >= ROUNDS; },
-    wrong() { misses++; sfx.bad(); },
+    right() { score++; $('#trk').style.width = (score / ROUNDS) * 100 + '%'; sfx.good(); return score >= ROUNDS; },
+    wrong() { misses++; sfx.soft(); },
     end(again) {
       const stars = misses <= 1 ? 3 : misses <= 4 ? 2 : 1;
       const p = me(); p.games[id] = Math.max(p.games[id] || 0, stars); save();
       const parties = addStars(stars);
+      const next = afterActivity('Play again ↻', again);
       sfx.win(); confetti(180);
       const praise = pick(PRAISE[stars]);
       say(`${praise} You finished ${title}!`);
-      const show = () => {
-        const el = popup(`<div class="big-emo">🏆</div><h2>${praise}</h2>
-          <div class="bigstars">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}">⭐</span>`).join('')}</div>
-          <p>You earned <b>${stars}</b> star${stars > 1 ? 's' : ''}!</p>
-          <div class="acts"><button class="btn white" data-games>🎮 Games</button><button class="btn big green" data-again>Play again ↻</button></div>`, (el) => {
-          $('[data-games]', el).onclick = () => { sfx.tap(); go('games'); };
-          $('[data-again]', el).onclick = () => { sfx.tap(); again(); };
-        });
-        return el;
-      };
-      if (parties.length) setTimeout(() => celebrate(parties, show), 1200);
+      const show = () => popup(`<div class="hero">${mascot('wow', 'cheer')}</div><h2>${praise}</h2>
+        <div class="bigstars">${[0, 1, 2].map((i) => `<span class="${i < stars ? 'on' : ''}">⭐</span>`).join('')}</div>
+        <p>+${stars} star${stars > 1 ? 's' : ''}</p>
+        <div class="acts"><button class="btn ghost" data-home>🏠 Home</button><button class="btn lg mint" data-nx>${next.label}</button></div>`, (el) => {
+        $('[data-home]', el).onclick = () => { sfx.tap(); ADV = false; go('home'); };
+        $('[data-nx]', el).onclick = () => { sfx.tap(); next.run(); };
+      });
       show();
+      if (parties.length) setTimeout(() => celebrate(parties, show), 1300);
     },
   };
 }
+const GRASS = '<svg class="grass" viewBox="0 0 400 56" preserveAspectRatio="none"><path fill="#9fdea9" d="M0 24 C80 6 160 30 240 18 S360 4 400 16 V56 H0z"/><path fill="#86d293" d="M0 40 C100 26 220 46 300 34 S380 28 400 34 V56 H0z"/></svg>';
 
-/* 🎈 Balloon Pop */
 SCREENS.play_balloon = function (kind) {
   const pool = kind === '123' ? NUMBERS.slice(1) : UPPER;
   const f = gameFrame('balloon', 'Balloon Pop', `
     <div class="ask">Pop the <span class="target" id="tg"></span></div>
-    <div class="field-b" id="fb"></div>`);
+    <div class="sky-field" id="fb">${GRASS}</div>`);
   const fb = $('#fb'), tg = $('#tg');
-  const COLORS = ['#ff6fa5', '#7c5cff', '#ffb31a', '#2fbf71', '#2b9be0', '#ff7a45'];
-  let target = null, balloons = [], raf = 0, last = performance.now(), spawnT = 0, sinceTarget = 0, over = false;
-  function newTarget() {
-    let t; do { t = pick(pool); } while (t === target);
-    target = t; tg.textContent = t; sinceTarget = 0;
-    say(`Pop the ${spoken(t)}!`);
-  }
+  const COLORS = ['#ff6b81', '#6c4cf1', '#ffb31a', '#22b37f', '#2a9ae0', '#ff8a3d'];
+  let target = null, balloons = [], raf = 0, last = performance.now(), spawnT = 0, since = 0, over = false;
+  function newTarget() { let t; do { t = pick(pool); } while (t === target); target = t; tg.textContent = t; since = 0; say(`Pop the ${spoken(t)}!`); }
   function spawn() {
     const W = fb.clientWidth, H = fb.clientHeight;
-    let c = Math.random() < 0.4 || sinceTarget >= 2 ? target : pick(pool);
-    sinceTarget = c === target ? 0 : sinceTarget + 1;
+    const c = Math.random() < 0.4 || since >= 2 ? target : pick(pool);
+    since = c === target ? 0 : since + 1;
     const el = document.createElement('div'); el.className = 'balloon';
     el.innerHTML = `<div class="b" style="--c:${pick(COLORS)}">${c}</div>`;
-    const b = { el, c, x: 10 + Math.random() * Math.max(10, W - 120), y: H + 20, v: 40 + Math.random() * 30 + Math.min(W, 900) * 0.02, sway: Math.random() * 6, dead: false };
+    const b = { el, c, x: 10 + Math.random() * Math.max(10, W - 116), y: H + 10, v: 42 + Math.random() * 28 + Math.min(W, 900) * 0.02, sway: Math.random() * 6, dead: false };
     el.style.transform = `translate(${b.x}px, ${b.y}px)`;
     el.addEventListener('pointerdown', (e) => { e.preventDefault(); tapB(b); });
     fb.appendChild(el); balloons.push(b);
@@ -668,11 +811,10 @@ SCREENS.play_balloon = function (kind) {
     if (b.dead || over) return;
     if (b.c === target) {
       b.dead = true; b.el.classList.add('popped'); sfx.pop();
-      const burst = document.createElement('div'); burst.className = 'burst'; burst.textContent = '💥';
-      burst.style.left = b.x + 30 + 'px'; burst.style.top = b.y + 30 + 'px'; fb.appendChild(burst); setTimeout(() => burst.remove(), 600);
+      const burst = document.createElement('div'); burst.className = 'burst'; burst.textContent = '✨';
+      burst.style.left = b.x + 28 + 'px'; burst.style.top = b.y + 30 + 'px'; fb.appendChild(burst); setTimeout(() => burst.remove(), 600);
       setTimeout(() => b.el.remove(), 300);
-      if (f.right()) { over = true; setTimeout(() => f.end(() => go('play_balloon', kind)), 500); }
-      else setTimeout(newTarget, 450);
+      if (f.right()) { over = true; setTimeout(() => f.end(() => go('play_balloon', kind)), 500); } else setTimeout(newTarget, 450);
     } else {
       f.wrong(); b.el.classList.remove('nope'); void b.el.offsetWidth; b.el.classList.add('nope');
       say(`That is ${spoken(b.c)}. Find ${spoken(target)}!`);
@@ -695,24 +837,23 @@ SCREENS.play_balloon = function (kind) {
   newTarget(); raf = requestAnimationFrame(tick);
 };
 
-/* 🍎 Count & Tap */
 SCREENS.play_count = function () {
   const f = gameFrame('count', 'Count and Tap', `
     <div class="ask" id="q">How many?</div>
-    <div class="objs" id="objs"></div>
+    <div class="card tray" id="objs"></div>
     <div class="choices" id="ch"></div>`);
   let lastN = 0;
   function round() {
     let n; do { n = 1 + rnd(10); } while (n === lastN); lastN = n;
     const e = pick(COUNT_EMO);
-    $('#q').innerHTML = `How many ${e} ?`;
+    $('#q').innerHTML = `How many <span style="font-size:1.3em">${e}</span> ?`;
     say('How many? Tap each one to count!');
     let counted = 0;
     $('#objs').innerHTML = Array.from({ length: n }, () => `<button class="obj">${e}</button>`).join('');
     $$('.obj', app).forEach((o) => o.onclick = () => {
       if (o.classList.contains('counted')) return;
       counted++; o.classList.add('counted'); o.insertAdjacentHTML('beforeend', `<span class="n">${counted}</span>`);
-      sfx.tap(); say(NUM_WORDS[counted]);
+      note(523 * Math.pow(1.06, counted * 2), 0.25, 0.12); say(NUM_WORDS[counted]);
     });
     const opts = new Set([n]);
     while (opts.size < 3) { const d = n + (rnd(2) ? 1 : -1) * (1 + rnd(3)); if (d >= 1 && d <= 10) opts.add(d); }
@@ -722,22 +863,21 @@ SCREENS.play_count = function () {
         b.classList.add('right'); $$('#ch .choice', app).forEach((x) => x.style.pointerEvents = 'none');
         say(`Yes! ${NUM_WORDS[n]}!`); confetti(40);
         if (f.right()) setTimeout(() => f.end(() => go('play_count')), 900); else setTimeout(round, 1300);
-      } else { b.classList.add('wrong'); f.wrong(); say('Oops! Let us count again.'); }
+      } else { b.classList.add('wrong'); f.wrong(); say('Let us count again!'); }
     });
   }
   round();
 };
 
-/* 🐘 Picture Match */
 SCREENS.play_picture = function () {
   const f = gameFrame('picture', 'Picture Match', `
     <div class="ask">Which one starts with…</div>
-    <div class="bigletter" id="L"></div>
+    <div class="hero-letter" id="L"></div>
     <div class="choices" id="ch"></div>`);
   const order = shuffle(UPPER); let i = 0;
   function round() {
     const L = order[i++ % order.length];
-    $('#L').textContent = L + ' ' + L.toLowerCase();
+    $('#L').textContent = L + L.toLowerCase();
     say(`Which picture starts with ${spoken(L)}?`);
     const others = shuffle(UPPER.filter((x) => x !== L)).slice(0, 2);
     $('#ch').innerHTML = shuffle([L, ...others]).map((x) => `<button class="choice pic" data-v="${x}">${WORDS[x][1]}<small>${WORDS[x][0]}</small></button>`).join('');
@@ -752,29 +892,27 @@ SCREENS.play_picture = function () {
   round();
 };
 
-/* 🧩 What comes next? */
 SCREENS.play_next = function () {
   const f = gameFrame('next', 'What Comes Next', `
     <div class="ask" id="q">What is missing?</div>
     <div class="seq" id="seq"></div>
     <div class="choices" id="ch"></div>`);
   function round() {
-    const letters = rnd(2) === 0;
-    const list = letters ? UPPER : NUMBERS.slice(1);
-    const start = rnd(list.length - 4 + 1);
+    const list = rnd(2) ? UPPER : NUMBERS.slice(1);
+    const start = rnd(list.length - 3);
     const seq = list.slice(start, start + 4);
     const miss = rnd(2) ? 3 : 1 + rnd(2);
     const ans = seq[miss];
-    $('#q').textContent = miss === 3 ? 'What comes next?' : 'What is missing?';
-    say(miss === 3 ? 'What comes next?' : 'What is missing?');
+    const q = miss === 3 ? 'What comes next?' : 'What is missing?';
+    $('#q').textContent = q; say(q);
     $('#seq').innerHTML = seq.map((c, k) => k === miss ? '<span class="q">?</span>' : `<span>${c}</span>`).join('');
     const opts = new Set([ans]);
-    while (opts.size < 3) { const c = pick(list); if (!seq.includes(c) || c !== ans) opts.add(c); }
+    while (opts.size < 3) opts.add(pick(list));
     $('#ch').innerHTML = shuffle([...opts]).map((x) => `<button class="choice" data-v="${x}">${x}</button>`).join('');
     $$('#ch .choice', app).forEach((b) => b.onclick = () => {
       if (b.dataset.v === ans) {
         b.classList.add('right'); $$('#ch .choice', app).forEach((x) => x.style.pointerEvents = 'none');
-        $('#seq .q').textContent = ans; $('#seq .q').classList.remove('q');
+        const qEl = $('#seq .q'); qEl.textContent = ans; qEl.classList.remove('q');
         say(seq.map(spoken).join(', ')); confetti(40);
         if (f.right()) setTimeout(() => f.end(() => go('play_next')), 1500); else setTimeout(round, 2200);
       } else { b.classList.add('wrong'); f.wrong(); say('Not that one. Try again!'); }
@@ -783,21 +921,20 @@ SCREENS.play_next = function () {
   round();
 };
 
-/* 🔠 Big & Small */
 SCREENS.play_pair = function () {
   const f = gameFrame('pair', 'Big and Small', `
     <div class="ask">Find the small letter for</div>
-    <div class="bigletter" id="L"></div>
+    <div class="hero-letter" id="L"></div>
     <div class="choices" id="ch"></div>`);
   const order = shuffle(UPPER); let i = 0;
   function round() {
-    const L = order[i++ % order.length];
+    const L = order[i++ % order.length], l = L.toLowerCase();
     $('#L').textContent = L;
     say(`Find small ${spoken(L)}!`);
-    const others = shuffle(LOWER.filter((x) => x !== L.toLowerCase())).slice(0, 3);
-    $('#ch').innerHTML = shuffle([L.toLowerCase(), ...others]).map((x) => `<button class="choice" data-v="${x}">${x}</button>`).join('');
+    const others = shuffle(LOWER.filter((x) => x !== l)).slice(0, 3);
+    $('#ch').innerHTML = shuffle([l, ...others]).map((x) => `<button class="choice" data-v="${x}">${x}</button>`).join('');
     $$('#ch .choice', app).forEach((b) => b.onclick = () => {
-      if (b.dataset.v === L.toLowerCase()) {
+      if (b.dataset.v === l) {
         b.classList.add('right'); $$('#ch .choice', app).forEach((x) => x.style.pointerEvents = 'none');
         say(`Yes! Big ${spoken(L)}, small ${spoken(L)}!`); confetti(40);
         if (f.right()) setTimeout(() => f.end(() => go('play_pair')), 1100); else setTimeout(round, 1500);
@@ -807,40 +944,42 @@ SCREENS.play_pair = function () {
   round();
 };
 
-/* ---------------------------------------------------------------- trophy */
+/* ================================================================== my stars */
 SCREENS.trophy = function () {
   const p = me(); const r = rankOf(p.stars); const nx = nextRank(p.stars);
   const pct = nx ? ((p.stars - r.at) / (nx.at - r.at)) * 100 : 100;
   const have = stickerCount(p.stars);
   const sorted = S.profiles.slice().sort((a, b) => b.stars - a.stars);
   app.innerHTML = `<div class="screen">
-    <div class="bar">${backBtn()}<h1>My Stars</h1><div class="spacer"></div></div>
-    <div class="rankcard">
+    <div class="topbar">${backBtn()}<h1>My Stars</h1><div class="sp"></div></div>
+    <div class="card rankcard">
       <div class="re">${r.e}</div><div class="rn">${esc(p.name)} is a ${r.n}!</div>
-      <div class="rs">⭐ ${p.stars} stars</div>
-      <div class="progress"><i style="width:${pct}%"></i></div>
+      <div class="rs">⭐ ${p.stars} stars &nbsp;·&nbsp; 🔥 ${streakOf(p)} day streak</div>
+      <div class="prog"><i style="width:${pct}%"></i></div>
       <div class="rs">${nx ? `${nx.at - p.stars} more ⭐ to become a ${nx.e} ${nx.n}` : 'You reached the top rank! 👑'}</div>
     </div>
-    <div class="section"><h3>🪜 Star ranks</h3><div class="ranks">${RANKS.map((x) => `<div class="${p.stars >= x.at ? (x === r ? 'cur' : '') : 'lock'}"><b>${x.e}</b>${x.n}<br>⭐${x.at}</div>`).join('')}</div></div>
-    <div class="section"><h3>🏅 Star board</h3><div class="board-list">${sorted.map((k, i) => `<div class="row ${k.id === p.id ? 'me' : ''}"><span class="pos">${['🥇', '🥈', '🥉'][i] || i + 1}</span><span class="av">${k.avatar}</span><span class="nm">${esc(k.name)}</span><span>${rankOf(k.stars).e} ⭐ ${k.stars}</span></div>`).join('')}</div>
-      ${S.profiles.length < 2 ? '<p class="note" style="margin-top:10px">Add a brother, sister or friend on the first screen to race on the star board!</p>' : ''}</div>
-    <div class="section"><h3>🎁 Sticker book (${have}/${STICKERS.length})</h3>
-      <div class="stickers">${STICKERS.map((s, i) => i < have ? `<div>${s}</div>` : `<div class="lock">⭐${(i + 1) * STICKER_EVERY}</div>`).join('')}</div></div>
-    <div class="section" style="text-align:center"><button class="btn white" data-parent>👪 Grown-ups: progress report</button></div>
+    <div class="sec"><span class="badge" style="background:var(--sun-l)">🪜</span><h2>Star ranks</h2></div>
+    <div class="ladder">${RANKS.map((x) => `<div class="${p.stars >= x.at ? (x === r ? 'cur' : '') : 'lock'}"><b>${x.e}</b>${x.n}<br>⭐ ${x.at}</div>`).join('')}</div>
+    <div class="sec"><span class="badge" style="background:var(--coral-l)">🏅</span><h2>Star board</h2></div>
+    <div class="leader">${sorted.map((k, i) => `<div class="card row ${k.id === p.id ? 'me' : ''}"><span class="pos">${['🥇', '🥈', '🥉'][i] || i + 1}</span>
+      <span class="avatar" style="--bg:${avBg(k.avatar)}">${k.avatar}</span><span class="nm">${esc(k.name)}</span><span class="sc">${rankOf(k.stars).e} ⭐ ${k.stars}</span></div>`).join('')}</div>
+    ${S.profiles.length < 2 ? '<div class="card note" style="margin-top:12px">👫 Add a brother, sister or friend on the first screen to race on the star board!</div>' : ''}
+    <div class="sec"><span class="badge" style="background:var(--mint-l)">🎁</span><h2>Sticker book · ${have}/${STICKERS.length}</h2></div>
+    <div class="stickers">${STICKERS.map((s, i) => i < have ? `<div>${s}</div>` : `<div class="lock">⭐${(i + 1) * STICKER_EVERY}</div>`).join('')}</div>
+    <div style="text-align:center;margin-top:26px"><button class="btn ghost" data-parent>👪 For grown-ups</button></div>
   </div>`;
   setBack(() => go('home'));
   say(`${p.name}, you have ${p.stars} stars. You are a ${r.n}!`);
   $('[data-parent]', app).onclick = () => { sfx.tap(); parentGate(() => go('report')); };
 };
 
-/** Simple grown-up check so little fingers don't wander into settings. */
 function parentGate(ok) {
   const a = 3 + rnd(6), b = 2 + rnd(7);
   const opts = shuffle([a + b, a + b + 1 + rnd(3), Math.max(1, a + b - 1 - rnd(3))]);
-  popup(`<div class="big-emo">👪</div><h2>For grown-ups</h2><p>What is ${a} + ${b}?</p>
-    <div class="acts">${opts.map((o) => `<button class="btn white" data-v="${o}">${o}</button>`).join('')}</div>
-    <div class="acts"><button class="btn pink" data-x>Cancel</button></div>`, (el) => {
-    $$('[data-v]', el).forEach((x) => x.onclick = () => { if (+x.dataset.v === a + b) { closePopup(); ok(); } else { sfx.bad(); closePopup(); } });
+  popup(`<div class="hero"><span class="big">👪</span></div><h2>For grown-ups</h2><p>What is ${a} + ${b}?</p>
+    <div class="acts">${opts.map((o) => `<button class="btn ghost" data-v="${o}">${o}</button>`).join('')}</div>
+    <div class="acts"><button class="btn coral" data-x>Cancel</button></div>`, (el) => {
+    $$('[data-v]', el).forEach((x) => x.onclick = () => { closePopup(); if (+x.dataset.v === a + b) ok(); else sfx.soft(); });
     $('[data-x]', el).onclick = closePopup;
   });
 }
@@ -849,29 +988,33 @@ SCREENS.report = function () {
   const p = me();
   const block = (k) => {
     const s = SETS[k];
-    const cells = s.items.map((c) => { const b = p.best[k + ':' + c] || 0; return `<span class="s${b}" title="${c}: ${b} stars, ${p.tries[k + ':' + c] || 0} tries">${c}</span>`; }).join('');
-    return `<div class="section"><h3>${s.title} · ${s.name}</h3><div class="rep">${cells}</div></div>`;
+    const cells = s.items.map((c) => { const b = p.best[k + ':' + c] || 0; return `<span class="s${b}">${c}</span>`; }).join('');
+    return `<div class="sec"><h2>${s.title} · ${s.name}</h2></div><div class="card note"><div class="rep">${cells}</div></div>`;
   };
   const weak = [];
-  for (const k of Object.keys(SETS)) for (const c of SETS[k].items) { const b = p.best[k + ':' + c] || 0; if ((p.tries[k + ':' + c] || 0) > 0 && b < 2) weak.push(c); }
+  for (const k of Object.keys(SETS)) for (const c of SETS[k].items) if ((p.tries[k + ':' + c] || 0) > 0 && (p.best[k + ':' + c] || 0) < 2) weak.push(c);
   const tried = Object.keys(p.tries).length;
   const total = Object.values(SETS).reduce((a, s) => a + s.items.length, 0);
   app.innerHTML = `<div class="screen">
-    <div class="bar">${backBtn()}<h1>${esc(p.name)}’s Report</h1><div class="spacer"></div></div>
-    <div class="note">
-      ⭐ <b>${p.stars}</b> stars · ${rankOf(p.stars).e} ${rankOf(p.stars).n} · played on <b>${p.days || 0}</b> day(s)<br>
-      ✏️ Traced <b>${tried}</b> of ${total} letters &amp; numbers<br>
-      🎮 Games: ${GAMES.map((g) => `${g.e} ${'⭐'.repeat(p.games[g.id] || 0) || '–'}`).join(' &nbsp; ')}<br>
-      ${weak.length ? `🔁 Needs more practice: <b style="font-family:Andika">${weak.join(' ')}</b>` : '👍 Nothing flagged for extra practice yet.'}
+    <div class="topbar">${backBtn()}<h1>${esc(p.name)}’s progress</h1><div class="sp"></div></div>
+    <div class="card note">
+      ⭐ <b>${p.stars}</b> stars · ${rankOf(p.stars).e} ${rankOf(p.stars).n}<br>
+      📅 Played on <b>${p.days || 0}</b> day(s) · 🔥 streak <b>${streakOf(p)}</b><br>
+      ✏️ Practised <b>${tried}</b> of ${total} letters &amp; numbers<br>
+      🎮 ${GAMES.map((g) => `${g.e} ${'⭐'.repeat(p.games[g.id] || 0) || '–'}`).join(' &nbsp; ')}<br>
+      ${weak.length ? `🔁 Needs more practice: <b style="font-family:Andika;font-size:1.2em">${weak.join(' ')}</b>` : '👍 Nothing flagged for extra practice yet.'}
     </div>
-    <div class="legend"><span><i style="background:#eee9f8"></i>Not tried</span><span><i style="background:#ffd8b0"></i>1 star</span><span><i style="background:#fff0a8"></i>2 stars</span><span><i style="background:#b8f1d2"></i>3 stars</span></div>
+    <div class="legend"><span><i style="background:#efebf8"></i>Not tried</span><span><i style="background:#ffe0c7"></i>1★</span><span><i style="background:#fff0b0"></i>2★</span><span><i style="background:#c4f2dc"></i>3★</span></div>
     ${block('upper')}${block('lower')}${block('num')}
-    <div class="section note">
-      <b>Tips</b><br>• Easy mode: the child colours inside a big letter. Dots: follow dotted letters. Magic: the letter shows for a moment, then the child writes it from memory (bonus star!).<br>
-      • Stars come from how much of the letter was traced and how neatly it stayed inside the lines.<br>
-      • Short sessions (10–15 minutes) work best for little ones.
+    <div class="sec"><h2>How Little Stars teaches</h2></div>
+    <div class="card note">
+      • <b>Correct letter formation.</b> Every letter is taught with its stroke order and direction — the green dot shows where to start, the arrow shows which way. Stars only come by following the strokes in order.<br>
+      • <b>Watch → Trace → Write.</b> First a finger demo, then tracing (road or dots), then <i>Memory</i> mode where the child writes from recall.<br>
+      • <b>Say it, see it, write it.</b> Each letter is spoken with a picture word (A for Apple) to link sound, shape and meaning.<br>
+      • <b>Short daily adventure.</b> 5 bite-size activities mixing a new letter, a number, a review of a weak letter and two games. About 10 minutes is ideal at this age.<br>
+      • <b>Encouragement only.</b> Mistakes get a gentle hint, never a buzzer or a lost star.
     </div>
-    <div class="settings">
+    <div class="toggles">
       <button class="toggle" data-rename>✏️ Rename</button>
       <button class="toggle" data-reset>🔄 Reset progress</button>
       <button class="toggle" data-del>🗑️ Remove child</button>
@@ -879,19 +1022,17 @@ SCREENS.report = function () {
   </div>`;
   setBack(() => go('trophy'));
   $('[data-rename]', app).onclick = () => { const n = prompt('New name', p.name); if (n && n.trim()) { p.name = n.trim().slice(0, 16); save(); go('report'); } };
-  $('[data-reset]', app).onclick = () => { if (confirm(`Reset all stars and progress for ${p.name}?`)) { Object.assign(p, { stars: 0, best: {}, tries: {}, games: {}, days: 0 }); save(); go('report'); } };
+  $('[data-reset]', app).onclick = () => { if (confirm(`Reset all stars and progress for ${p.name}?`)) { Object.assign(p, { stars: 0, best: {}, tries: {}, games: {}, days: 0, streak: 0, streakDay: null, daily: null }); save(); go('report'); } };
   $('[data-del]', app).onclick = () => { if (confirm(`Remove ${p.name} and all their stars?`)) { S.profiles = S.profiles.filter((x) => x.id !== p.id); S.current = null; save(); go('who'); } };
 };
 
-/* ------------------------------------------------------------------ boot */
+/* ================================================================== boot */
 const fontsReady = (document.fonts && document.fonts.load)
   ? Promise.all([document.fonts.load('700 40px "Andika"'), document.fonts.load('600 20px "Fredoka"')]).catch(() => {}).then(() => new Promise((r) => setTimeout(r, 30)))
   : Promise.resolve();
-// unlock audio on first touch (iOS)
 addEventListener('pointerdown', () => actx(), { once: true });
+fontsReady.then(() => { if (me()) go('home'); else go('who'); });
 
-if (me()) go('home'); else go('who');
-
-if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+if (!NATIVE && 'serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
   addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
 }
