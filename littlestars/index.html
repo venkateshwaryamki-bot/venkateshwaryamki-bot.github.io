@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>Little Stars — Trace, Play &amp; Learn</title>
+  <meta name="description" content="Little Stars: a playful app for nursery and LKG kids to practise writing ABC and 123 by hand, play learning games and earn stars." />
+  <meta name="theme-color" content="#7c5cff" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Little Stars" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="preload" href="fonts/andika-700.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="preload" href="fonts/fredoka.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="app.css" />
+</head>
+<body>
+  <div class="sky" aria-hidden="true"><span></span><span></span><span></span></div>
+  <main id="app"></main>
+  <div id="popup-root"></div>
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <script src="app.js"></script>
+</body>
+</html>
