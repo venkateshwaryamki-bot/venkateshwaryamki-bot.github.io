@@ -63,6 +63,21 @@
     whisper: '<path d="M4 5h16v11H10l-5 4v-4H4z"/><path d="M9 10.5h.01M12 10.5h.01M15 10.5h.01" stroke-width="2.6"/>',
     heart: '<path d="M12 20s-8-4.7-8-10.5A4.5 4.5 0 0 1 12 7a4.5 4.5 0 0 1 8 2.5C20 15.3 12 20 12 20z"/>',
     rhyme: '<path d="M5 18V6l7 6 7-6v12"/>',
+    paw: '<circle cx="6" cy="10" r="2"/><circle cx="10" cy="5.5" r="2"/><circle cx="14" cy="5.5" r="2"/><circle cx="18" cy="10" r="2"/><path d="M12 11c-3 0-5.5 3.5-5.5 6 0 2 1.6 2.8 3 2.3l2.5-.8 2.5.8c1.4.5 3-.3 3-2.3 0-2.5-2.5-6-5.5-6z"/>',
+    pizza: '<path d="M12 21L3.5 6.5A16 16 0 0 1 20.5 6.5z"/><path d="M5.2 9.4a13 13 0 0 1 13.6 0"/><circle cx="10" cy="11.5" r="1.1"/><circle cx="13.5" cy="14" r="1.1"/><circle cx="12" cy="17.2" r="0.9"/>',
+    building: '<rect x="4" y="3" width="11" height="18" rx="1"/><path d="M15 9h5v12h-5M8 7h3M8 11h3M8 15h3M10 21v-3"/>',
+    briefcase: '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V4.5h6V7M3 12.5h18M11 12.5v2h2v-2"/>',
+    ball: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5l3.6 2.6-1.4 4.2H9.8l-1.4-4.2zM12 3v4.5M15.6 10.1L20 8.6M14.2 14.3l2.6 4M9.8 14.3l-2.6 4M8.4 10.1L4 8.6"/>',
+    sofa: '<path d="M5 11V8a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v3"/><path d="M3 13a2 2 0 0 1 4 0v2h10v-2a2 2 0 0 1 4 0v5H3zM5 18v2M19 18v2"/>',
+    tower: '<path d="M12 2.5v3M9.5 21L12 5.5 14.5 21M8 21l1.2-5h5.6l1.2 5M10 11h4M6 21h12"/>',
+    popcorn: '<path d="M6 9l1.5 12h9L18 9z"/><path d="M10 9l.5 12M14 9l-.5 12M6 9a2.5 2.5 0 0 1 1.5-4.5A3 3 0 0 1 12 3a3 3 0 0 1 4.5 1.5A2.5 2.5 0 0 1 18 9"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+    guitar: '<path d="M14.5 9.5l5-5M18 3l3 3"/><path d="M13 8.5c-1.5-1-3.5-.8-4.5.5-.6.7-.6 1.7-1.5 2.2-1.5.8-3.7.3-4.5 2.3-.9 2.4.8 5 2.5 6.2 2 1.4 4.5 1.3 5.5-.5.7-1.2.4-2.8 1.5-3.6.9-.6 1.9-.6 2.6-1.4 1.1-1.2 1.1-3.4-.1-4.5z"/><circle cx="10" cy="14" r="1.6"/>',
+    phone: '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>',
+    car: '<path d="M4 16v-3.5L6 7.5A2 2 0 0 1 7.9 6h8.2A2 2 0 0 1 18 7.5l2 5V16z"/><path d="M4 12.5h16M4 16v2.5h3V16M17 16v2.5h3V16"/><circle cx="7.5" cy="14.2" r=".6"/><circle cx="16.5" cy="14.2" r=".6"/>',
+    leaf: '<path d="M5 19C4 11 9 5 20 4c0 9-5 15-13 14"/><path d="M5 19c3-5 6-8 10-10"/>',
+    palette: '<path d="M12 3a9 9 0 0 0 0 18c1.4 0 2-1 1.6-2.1-.4-1.2.4-2.4 1.7-2.4H18a3 3 0 0 0 3-3C21 7 17 3 12 3z"/><circle cx="7.5" cy="11" r="1.2"/><circle cx="10" cy="7" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/>',
+    shirt: '<path d="M8 3.5L3 6.5l2 4 2-1V21h10V9.5l2 1 2-4-5-3c0 1.7-1.6 3-3.5 3S8 5.2 8 3.5z"/>',
     speaker: '<path d="M7 4h10v16H7z"/><circle cx="12" cy="14.5" r="2.5"/><path d="M12 8h.01" stroke-width="2.6"/>'
   };
   function icon(n, cls) { return '<svg class="i ' + (cls || "") + '" viewBox="0 0 24 24">' + (IC[n] || "") + "</svg>"; }
@@ -74,43 +89,61 @@
   /* ---------- twists & forfeits ---------- */
   var TWISTS = [
     { id: "mime", icon: "film", title: "Silent Movie", desc: "No talking! Act out your clue like a silent film star." },
-    { id: "dialogue", icon: "zap", title: "Punch Dialogue", desc: "Deliver your clue like a mass hero’s entry dialogue. Slow-motion encouraged." },
-    { id: "serial", icon: "tv", title: "Serial Drama", desc: "Say your clue with over-the-top TV serial emotion. Zoom-in face, three times." },
-    { id: "amma", icon: "heart", title: "Amma Mode", desc: "Give your clue exactly the way your mother would say it." },
+    { t: 1, id: "dialogue", icon: "zap", title: "Punch Dialogue", desc: "Deliver your clue like a mass hero’s entry dialogue. Slow-motion encouraged." },
+    { t: 1, id: "serial", icon: "tv", title: "Serial Drama", desc: "Say your clue with over-the-top TV serial emotion. Zoom-in face, three times." },
+    { t: 1, id: "amma", icon: "heart", title: "Amma Mode", desc: "Give your clue exactly the way your mother would say it." },
     { id: "sound", icon: "sound", title: "Sound Effects", desc: "No words allowed — your clue must be a sound." },
     { id: "whisper", icon: "whisper", title: "Whisper Round", desc: "Every clue must be whispered. Lean in, everyone." },
     { id: "rhyme", icon: "rhyme", title: "Rhyme Time", desc: "Your clue must rhyme with a word linked to the secret." },
-    { id: "commentary", icon: "mic", title: "Cricket Commentary", desc: "Give your clue like a live cricket commentator on the last ball." },
+    { t: 1, id: "commentary", icon: "mic", title: "Cricket Commentary", desc: "Give your clue like a live cricket commentator on the last ball." },
     { id: "speed", icon: "timer", title: "Lightning Round", desc: "Only 60 seconds on the clock. Think fast!" },
     { id: "hotseat", icon: "flame", title: "Hot Seat", desc: "Before voting, one player must defend themselves for 20 seconds." },
-    { id: "double", icon: "users", title: "Double Trouble", desc: "There are TWO imposters this round. Trust no one." }
+    { id: "double", icon: "users", title: "Double Trouble", desc: "There are TWO imposters this round. Trust no one." },
+    { u: 1, id: "trailer", icon: "film", title: "Movie Trailer", desc: "Give your clue in a deep movie-trailer voice. “In a world…”" },
+    { u: 1, id: "robot", icon: "zap", title: "Robot Mode", desc: "Say your clue like a robot. Beep boop. No emotion allowed." },
+    { u: 1, id: "sports", icon: "mic", title: "Live Commentary", desc: "Give your clue like a sports commentator in the final seconds of a match." },
+    { u: 1, id: "opera", icon: "music", title: "Opera Night", desc: "Sing your clue like a dramatic opera star." }
   ];
   IC.timer = '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/>';
-  var FORFEITS = [
+  var FORFEITS_TE = [
     "Do the Naatu Naatu hook step for 10 seconds.",
     "Sing the chorus of any Telugu hit song.",
     "Deliver a dramatic TV-serial dialogue to the person on your left.",
     "Imitate your favourite uncle at a wedding.",
-    "Speak in an American accent until the next round ends.",
     "Give a 20-second speech on why curd rice is the greatest food.",
     "Act out a Pelli Choopulu meeting with the person on your right.",
     "Make your best Brahmanandam expression and hold it for 5 seconds.",
     "Re-tell the last round like a cricket commentator.",
-    "Give every player a one-line compliment.",
     "Do 10 sit-ups while counting out loud in Telugu.",
     "Dance like you’re leading a wedding baraat for 15 seconds.",
+    "Sell a jar of Avakaya to the group like a TV advert.",
+    "Make a Bigg Boss-style nomination speech about one player.",
+    "Introduce yourself with a mass punch dialogue.",
+    "Do the Butta Bomma shoulder step.",
+    "Serve water to everyone like a wedding caterer."
+  ];
+  var FORFEITS_ALL = [
+    "Speak in a different accent until the next round ends.",
+    "Give every player a one-line compliment.",
     "Read today’s dinner menu like a breaking-news anchor.",
     "Make a hero entry into the room while everyone hums background music.",
     "Tell the group a funny childhood story.",
     "Scold the group like a strict school headmaster.",
-    "Sell a jar of Avakaya to the group like a TV advert.",
-    "Make a Bigg Boss-style nomination speech about one player.",
     "Say “I am NOT the imposter” in three different emotions.",
-    "Introduce yourself with a mass punch dialogue.",
-    "Do the Butta Bomma shoulder step.",
-    "Serve water to everyone like a wedding caterer.",
     "Narrate your morning routine like a movie trailer voice.",
-    "Imitate how your parents answer a phone call."
+    "Imitate how your parents answer a phone call.",
+    "Show your best dance move for 10 seconds.",
+    "Talk like a pirate until the next round ends.",
+    "Sing “Happy Birthday” to the player on your left.",
+    "Do 10 jumping jacks.",
+    "Tell a joke — keep going until someone laughs.",
+    "Do an impression of another player and let the group guess who.",
+    "Walk across the room like a fashion model.",
+    "Speak in a robot voice for one minute.",
+    "Sell the nearest object to the group like a TV advert.",
+    "Hold a plank until the next player finishes their clue.",
+    "Describe your perfect day using only five words.",
+    "Do your best animal impression and let everyone guess it."
   ];
 
   /* ---------- persistent state ---------- */
@@ -175,6 +208,25 @@
   function allPacks() { return PACKS.concat([customPack()]); }
   function packById(id) { var a = allPacks(); for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i]; return null; }
   function cleanPlayers() { return S.players.map(function (p) { return String(p).trim(); }).filter(Boolean); }
+  function teluguFlavour() { return S.packs.some(function (id) { var p = packById(id); return p && p.id !== CUSTOM_ID && p.group !== "world"; }); }
+  function forfeitPool() { return teluguFlavour() ? FORFEITS_ALL.concat(FORFEITS_TE) : FORFEITS_ALL; }
+  function wordStyle() {
+    var te = false, w = false;
+    S.packs.forEach(function (id) { var p = packById(id); if (!p || p.id === CUSTOM_ID) return; if (p.group === "world") w = true; else te = true; });
+    return te && w ? "both" : te ? "telugu" : w ? "world" : "";
+  }
+  function applyStyle(style) {
+    var keepCustom = S.packs.indexOf(CUSTOM_ID) >= 0;
+    S.packs = PACKS.filter(function (p) { return style === "both" || (style === "world") === (p.group === "world"); }).map(function (p) { return p.id; });
+    if (keepCustom) S.packs.push(CUSTOM_ID);
+    save();
+  }
+  function styleSeg() {
+    var cur = wordStyle();
+    return '<div class="seg stylebar">' + [["telugu", "Telugu"], ["world", "Universal"], ["both", "Both"]].map(function (o) {
+      return '<button class="' + (cur === o[0] ? "on" : "") + '" data-act="style" data-v="' + o[0] + '">' + o[1] + "</button>";
+    }).join("") + "</div>";
+  }
   function selectedPacks() { return S.packs.map(packById).filter(function (p) { return p && p.words.length >= 2; }); }
 
   /* ---------- confetti ---------- */
@@ -225,6 +277,8 @@
       else if (S.twists === "always" || rnd(100) < 40) {
         var pool = TWISTS.filter(function (t) {
           if (t.id === "double") return n >= 5 && k === 1;
+          if (t.t) return teluguFlavour();
+          if (t.u) return wordStyle() !== "telugu";
           return true;
         });
         twist = pick(pool);
@@ -290,7 +344,7 @@
     if (S.accomplice) extras.push("Accomplice");
     if (S.forfeits) extras.push("Forfeits");
     var leader = S.target ? leaderLine() : "";
-    return '<div class="top"><div class="brand grow">' + LOGO + "<div><b>Who's the Imposter?</b><span>Telugu Family Edition</span></div></div>" +
+    return '<div class="top"><div class="brand grow">' + LOGO + "<div><b>Who's the Imposter?</b><span>" + (wordStyle() === "world" ? "Party Edition · for everyone" : wordStyle() === "both" ? "Telugu & Universal Edition" : "Telugu Family Edition") + "</span></div></div>" +
       '<button class="ib" data-act="how" aria-label="How to play">' + icon("help") + "</button></div>" +
       '<div class="hero"><div class="pill"><i></i>PARTY GAME · 3–20 PLAYERS</div>' +
       "<h1>One of you is<br><em>faking it.</em></h1>" +
@@ -301,6 +355,7 @@
       li("categories", "film", "#F8C95C", "#EF7D3C", "Categories", (packs.length === 1 ? "1 category" : packs.length + " categories") + " · " + words + " words", "") +
       li("settings", "sliders", "#C7AEFF", "#8253EE", "Game settings", modeName + " · " + plural(k, "imposter") + (extras.length ? " · " + extras.join(", ") : ""), "") +
       "</div>" +
+      '<div class="stylewrap"><div class="eyebrow">Words</div>' + styleSeg() + '<p class="dim">' + ({ telugu: "Telugu movies, food, family and festivals.", world: "Universal words anyone can play — great with guests from anywhere.", both: "Telugu and universal categories mixed together.", "": "Choose which words to play with." })[wordStyle()] + "</p></div>" +
       '<div class="quick"><button class="btn ghost" data-act="how">' + icon("bulb") + "Rules</button>" +
       '<button class="btn ghost" data-act="scores">' + icon("trophy") + "Scores</button></div>" +
       '<div class="footer"><button class="btn" data-act="start">' + icon("play") + (S.target ? "Play · first to " + S.target : "Start Game") + "</button></div>";
@@ -335,18 +390,28 @@
   /* ---------- categories ---------- */
   VIEWS.categories = function () {
     var allOn = PACKS.every(function (p) { return S.packs.indexOf(p.id) >= 0; });
-    var tiles = allPacks().map(function (p) {
+    function tile(p) {
       var on = S.packs.indexOf(p.id) >= 0;
       var cnt = p.id === CUSTOM_ID ? (p.words.length ? plural(p.words.length, "word") : "Tap to add words") : plural(p.words.length, "word");
       return '<button class="tile ' + (on ? "on" : "off") + '" data-act="pack" data-id="' + p.id + '">' +
         '<span class="ic" style="background:' + grad(p) + '">' + icon(p.icon) + '</span><span class="tick">' + icon("check") + "</span>" +
         "<span><b>" + esc(p.name) + "</b><small>" + esc(p.desc) + '</small><small style="color:var(--dim)">' + cnt + "</small></span>" +
         (p.id === CUSTOM_ID && p.words.length ? '<span class="edit link" data-act="editcustom">Edit</span>' : "") + "</button>";
-    }).join("");
+    }
+    function section(title, sub, group, list) {
+      var on = list.every(function (p) { return S.packs.indexOf(p.id) >= 0; });
+      return '<div class="section-h"><div><div class="eyebrow">' + title + '</div><div class="dim">' + sub + '</div></div><button class="link" data-act="grouppacks" data-g="' + group + '">' + (on ? "Clear" : "Select all") + "</button></div>" +
+        '<div class="tiles">' + list.map(tile).join("") + "</div>";
+    }
+    var tePacks = PACKS.filter(function (p) { return p.group !== "world"; }), wPacks = PACKS.filter(function (p) { return p.group === "world"; });
+    var teSec = section("Telugu & family", "Movies, food, relatives, festivals", "telugu", tePacks);
+    var wSec = section("Universal", "No cultural knowledge needed — perfect for guests", "world", wPacks);
+    var tiles = (wordStyle() === "world" ? wSec + teSec : teSec + wSec) +
+      section("Your own", "Family inside jokes", "custom", [customPack()]);
     var n = selectedPacks().length;
     return top("Categories", backBtn("home"), '<button class="link" data-act="allpacks">' + (allOn ? "Clear all" : "Select all") + "</button>") +
-      '<p class="muted">Each round uses a random category from your selection.</p>' +
-      '<div class="tiles">' + tiles + "</div>" +
+      '<p class="muted">Each round uses a random category from your selection.</p>' + styleSeg() +
+      tiles +
       '<div class="footer"><button class="btn" data-act="home">' + icon("check") + "Done · " + n + " selected</button></div>";
   };
 
@@ -655,7 +720,7 @@
       else if (outcome === "joker" || outcome === "ghostwin") loser = rnd(R.players.length);
       else if (R.voted >= 0) loser = R.voted;
       else loser = pick(R.players.map(function (_, i) { return i; }).filter(function (i) { return !onImpTeam(i); }));
-      R.dareTo = loser; R.dare = pick(FORFEITS);
+      R.dareTo = loser; R.dare = pick(forfeitPool());
     }
     S.rounds++;
     S.history.unshift({ w: R.word[0], p: R.pack.id, i: R.imps.map(function (j) { return R.players[j]; }), o: outcome, t: Date.now(), tw: R.twist ? R.twist.title : R.ghost ? "Ghost round" : "" });
@@ -790,7 +855,8 @@
       "<li>" + icon("joker") + "<span><b>The Joker</b> knows the word but wins if voted out.</span></li>" +
       "<li>" + icon("link") + "<span><b>The Accomplice</b> knows who the imposter is and secretly helps.</span></li>" +
       "<li>" + icon("dice") + "<span><b>Forfeits</b> — the round’s loser performs a dare.</span></li></ul>" +
-      '<div class="group" style="margin-top:16px;padding:14px 16px"><b>Example</b><p style="margin-top:4px">Word: <b style="color:var(--text)">Pulihora</b>. Good clues: “temple”, “yellow”, “tangy”. Too easy: “tamarind rice”.</p></div>' +
+      '<div class="group" style="margin-top:16px;padding:14px 16px"><b>Example</b><p style="margin-top:4px">' + (wordStyle() === "world" ? 'Word: <b style="color:var(--text)">Beach</b>. Good clues: “towel”, “holiday”, “castle”. Too easy: “sand and waves”.' : 'Word: <b style="color:var(--text)">Pulihora</b>. Good clues: “temple”, “yellow”, “tangy”. Too easy: “tamarind rice”.') + "</p></div>" +
+      '<div class="group" style="margin-top:10px;padding:14px 16px"><b>Playing with guests?</b><p style="margin-top:4px">Tap <b style="color:var(--text)">Universal</b> on the home screen for words anyone can play, whatever their background.</p></div>' +
       '<div class="acts"><button class="btn" data-act="close">Got it</button></div>');
   }
   function editCustom() {
@@ -842,6 +908,16 @@
         save(); render(); break;
       }
       case "editcustom": editCustom(); break;
+      case "style": applyStyle(el.getAttribute("data-v")); render(); toast({ telugu: "Telugu categories selected", world: "Universal categories selected", both: "All categories selected" }[el.getAttribute("data-v")]); break;
+      case "grouppacks": {
+        var g = el.getAttribute("data-g");
+        var ids = (g === "custom" ? [customPack()] : PACKS.filter(function (p) { return (g === "world") === (p.group === "world"); })).map(function (p) { return p.id; });
+        if (g === "custom" && customPack().words.length < 2) { editCustom(); break; }
+        var allSel = ids.every(function (id) { return S.packs.indexOf(id) >= 0; });
+        S.packs = S.packs.filter(function (id) { return ids.indexOf(id) < 0; });
+        if (!allSel) S.packs = S.packs.concat(ids);
+        save(); render(); break;
+      }
       case "allpacks": {
         var allOn = PACKS.every(function (p) { return S.packs.indexOf(p.id) >= 0; });
         S.packs = allOn ? [] : PACKS.map(function (p) { return p.id; }).concat(customPack().words.length >= 2 ? [CUSTOM_ID] : []);
@@ -915,7 +991,7 @@
         break;
       }
       case "redare": {
-        var d; do { d = pick(FORFEITS); } while (d === R.dare);
+        var d; do { d = pick(forfeitPool()); } while (d === R.dare);
         R.dare = d; render(); break;
       }
       case "newmatch": newMatch(); R = null; go("home"); break;

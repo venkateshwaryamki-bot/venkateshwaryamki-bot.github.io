@@ -395,3 +395,11 @@ textarea:focus { border-color: var(--gold); }
 .extras li { display: flex; gap: 12px; color: var(--muted); font-size: 14.5px; }
 .extras li svg { color: var(--gold); margin-top: 1px; }
 .extras li b { color: var(--text); }
+
+/* ===== 4.0 universal words ===== */
+.stylewrap { display: flex; flex-direction: column; gap: 8px; }
+.stylewrap .dim { padding: 0 2px; }
+.stylebar button { min-height: 44px; font-size: 15px; }
+.stylebar button.on { background: var(--grad); color: #1b1206; }
+.section-h .dim { margin-top: 2px; }
+.section-h + .tiles { margin-top: -2px; }
