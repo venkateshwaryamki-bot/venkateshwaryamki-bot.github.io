@@ -15,7 +15,7 @@ B=build
 rm -rf "$B" && mkdir -p "$B/gen" "$B/classes" "$B/assets/www"
 
 # 1. Web game -> assets (service worker / manifest not needed inside the APK)
-cp ../index.html ../icon.svg "$B/assets/www/"
+cp -r ../index.html ../icon.svg ../fonts "$B/assets/www/"
 
 # 2. Resources -> R.java
 aapt package -f -m -J "$B/gen" -M AndroidManifest.xml -S res -I "$ANDROID_JAR"
