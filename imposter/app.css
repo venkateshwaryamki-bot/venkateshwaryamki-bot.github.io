@@ -413,3 +413,19 @@ textarea:focus { border-color: var(--gold); }
 .players.sorting { user-select: none; }
 .card.locked .cover .hold { background: rgba(255,255,255,.05); border-color: var(--line2); color: var(--muted); }
 .card.locked { cursor: default; }
+
+/* ===== 4.2 bench of saved players ===== */
+.bench { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; min-height: 76px; border-radius: var(--r); border: 1.5px dashed var(--line2); background: rgba(255,255,255,.015); transition: border-color .2s, background .2s; align-content: flex-start; }
+.bench.over { border-color: var(--gold); background: rgba(244,183,64,.08); }
+.bchip { display: flex; align-items: center; gap: 8px; padding: 5px 4px 5px 5px; border-radius: 99px; background: var(--s2); border: 1px solid var(--line); font-weight: 600; font-size: 15px; cursor: grab; touch-action: none; max-width: 100%; }
+.bchip .av { width: 30px; height: 30px; font-size: 13px; }
+.bchip .bn { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bchip .bx { width: 28px; height: 28px; border-radius: 50%; border: 0; background: transparent; color: var(--dim); display: grid; place-items: center; cursor: pointer; }
+.bchip .bx svg { width: 15px; height: 15px; }
+.bchip.lifted { opacity: .3; }
+.bchip:active { background: var(--s3); }
+.dragghost { position: fixed; z-index: 50; pointer-events: none; margin: 0; transform: scale(1.04) rotate(-1deg); box-shadow: 0 20px 44px rgba(0,0,0,.6); border-color: var(--gold) !important; background: var(--s2) !important; opacity: .96; }
+.slot { border-radius: 18px; border: 2px dashed rgba(244,183,64,.55); background: rgba(244,183,64,.06); }
+.emptyzone { display: flex; align-items: center; gap: 12px; padding: 18px 16px; border-radius: 18px; border: 1.5px dashed var(--line2); color: var(--muted); font-size: 14px; }
+.emptyzone svg { color: var(--dim); }
+.emptyzone.small { border: 0; padding: 6px 4px; width: 100%; }

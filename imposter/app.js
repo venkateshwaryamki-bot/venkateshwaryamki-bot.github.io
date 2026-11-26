@@ -40,6 +40,7 @@
     plus: '<path d="M12 5v14M5 12h14"/>',
     trash: '<path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>',
     lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3M12 14.5v2.5"/>',
+    benchdown: '<path d="M12 4v10M7.5 9.5L12 14l4.5-4.5M5 19.5h14"/>',
     grip: '<path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke-width="3.2"/>',
     eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
     eyeoff: '<path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.6C3.7 8.4 2 12 2 12s3.5 7 10 7a9.8 9.8 0 0 0 5-1.4M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
@@ -154,7 +155,7 @@
     packs: ["movies", "characters", "heroes", "food", "relations", "moments", "relatives", "parents", "festivals", "wedding", "places"],
     imposters: 1, mode: "classic", timer: 180, voting: "group", lastGuess: true, hints: true,
     twists: "sometimes", joker: true, accomplice: false, forfeits: true, target: 0,
-    sound: true, haptics: true, custom: "", scores: {}, stats: {}, used: {}, rounds: 0, history: [], seenIntro: false, v3: false
+    sound: true, haptics: true, custom: "", scores: {}, stats: {}, used: {}, rounds: 0, history: [], seenIntro: false, v3: false, bench: []
   };
   var S = load();
   function load() {
@@ -176,8 +177,9 @@
   function pick(a) { return a[rnd(a.length)]; }
   function initial(n) { n = String(n).trim(); return n ? n.charAt(0).toUpperCase() : "?"; }
   function avatar(name, i, cls) {
-    var h = 0, n = String(name).trim().toLowerCase();
-    for (var c = 0; c < n.length; c++) h = (h * 31 + n.charCodeAt(c)) >>> 0;
+    var h = 2166136261, n = String(name).trim().toLowerCase();
+    for (var c = 0; c < n.length; c++) { h ^= n.charCodeAt(c); h = Math.imul(h, 16777619) >>> 0; }
+    h ^= h >>> 13; h = Math.imul(h, 0x5bd1e995) >>> 0; h = (h ^ (h >>> 15)) >>> 0;
     return '<div class="av ' + (cls || "") + '" style="background:' + COLORS[h % COLORS.length] + '">' + esc(initial(name)) + "</div>";
   }
   function maxImposters(n) { return Math.max(1, Math.floor((n - 1) / 2)); }
@@ -334,51 +336,76 @@
     if (screen === "players") bindDrag();
   }
 
-  /* Drag the grip handle to reorder players (pointer events, so it works with touch). */
+  /* Drag players: reorder within the game, move to the bench, or pull from the bench into a seat. */
+  var suppressClick = false;
   function bindDrag() {
-    var list = $app.querySelector(".players");
-    if (!list) return;
-    list.addEventListener("pointerdown", function (e) {
-      var grip = e.target.closest("[data-grip]");
-      if (!grip) return;
-      e.preventDefault();
+    var game = document.getElementById("gamelist"), bench = document.getElementById("benchlist");
+    if (!game || !bench) return;
+    function onDown(e) {
+      var grip = e.target.closest("[data-grip]"), chip = !grip && e.target.closest(".bchip");
+      if (!grip && !chip) return;
+      if (chip && e.target.closest(".bx")) return;
+      if (grip) e.preventDefault();
       readPlayers();
-      var rows = Array.prototype.slice.call(list.children);
-      var from = +grip.getAttribute("data-grip"), to = from, row = rows[from];
-      var step = row.offsetHeight + 8, startY = e.clientY, startScroll = window.scrollY, lastY = e.clientY;
-      row.classList.add("dragging"); list.classList.add("sorting");
-      try { grip.setPointerCapture(e.pointerId); } catch (x) { }
-      vibrate(15);
-      function layout() {
-        var dy = lastY - startY + (window.scrollY - startScroll);
-        dy = Math.max(-from * step, Math.min((rows.length - 1 - from) * step, dy));
-        row.style.transform = "translateY(" + dy + "px)";
-        var t = Math.max(0, Math.min(rows.length - 1, from + Math.round(dy / step)));
-        if (t !== to) { to = t; vibrate(8); }
-        rows.forEach(function (r, i) {
-          if (r === row) return;
-          var shift = from < i && i <= to ? -step : to <= i && i < from ? step : 0;
-          r.style.transform = shift ? "translateY(" + shift + "px)" : "";
-        });
+      var src = grip ? grip.closest(".player") : chip;
+      var kind = grip ? "game" : "bench", from = grip ? +grip.getAttribute("data-grip") : +chip.getAttribute("data-b");
+      var sx = e.clientX, sy = e.clientY, started = false, ghost, slot, target = null, idx = 0, offX, offY, lastX = sx, lastY = sy;
+      var cap = grip || chip;
+      try { cap.setPointerCapture(e.pointerId); } catch (x) { }
+      function begin() {
+        started = true;
+        var r = src.getBoundingClientRect();
+        offX = sx - r.left; offY = sy - r.top;
+        ghost = src.cloneNode(true); ghost.classList.add("dragghost");
+        ghost.style.width = r.width + "px"; ghost.style.left = r.left + "px"; ghost.style.top = r.top + "px";
+        document.body.appendChild(ghost);
+        slot = document.createElement("div"); slot.className = "slot";
+        if (kind === "game") { slot.style.height = r.height + "px"; src.style.display = "none"; game.insertBefore(slot, src); }
+        else { slot.style.height = "56px"; src.classList.add("lifted"); }
+        vibrate(15);
+      }
+      function place() {
+        ghost.style.left = (lastX - offX) + "px"; ghost.style.top = (lastY - offY) + "px";
+        var g = game.getBoundingClientRect(), b = bench.getBoundingClientRect();
+        var t = null;
+        if (lastY >= b.top - 20) t = "bench";
+        else if (lastY >= g.top - 60 && lastY <= g.bottom + 70) t = "game";
+        bench.classList.toggle("over", t === "bench" && kind === "game");
+        if (t === "game") {
+          var rows = Array.prototype.slice.call(game.querySelectorAll(".player")).filter(function (r) { return r !== src; });
+          idx = rows.filter(function (r) { var rr = r.getBoundingClientRect(); return rr.top + rr.height / 2 < lastY; }).length;
+          var ref = rows[idx] || null;
+          var empty = game.querySelector(".emptyzone"); if (empty) empty.style.display = "none";
+          if (slot.parentNode !== game || slot.nextSibling !== ref) game.insertBefore(slot, ref);
+        } else if (slot.parentNode) slot.parentNode.removeChild(slot);
+        if (t !== target) { target = t; if (t) vibrate(8); }
       }
       function move(ev) {
-        lastY = ev.clientY;
-        if (ev.clientY > innerHeight - 140) window.scrollBy(0, 10);
-        else if (ev.clientY < 90) window.scrollBy(0, -10);
-        layout();
+        lastX = ev.clientX; lastY = ev.clientY;
+        if (!started) { if (Math.abs(lastX - sx) + Math.abs(lastY - sy) < 8) return; begin(); }
+        if (lastY > innerHeight - 120) window.scrollBy(0, 12); else if (lastY < 90) window.scrollBy(0, -12);
+        place();
       }
       function up() {
-        grip.removeEventListener("pointermove", move);
-        grip.removeEventListener("pointerup", up);
-        grip.removeEventListener("pointercancel", up);
-        if (to !== from) { var p = S.players.splice(from, 1)[0]; S.players.splice(to, 0, p); save(); }
-        render();
+        cap.removeEventListener("pointermove", move); cap.removeEventListener("pointerup", up); cap.removeEventListener("pointercancel", up);
+        if (!started) return;
+        suppressClick = true; setTimeout(function () { suppressClick = false; }, 50);
+        if (ghost) ghost.remove();
+        var name;
+        if (kind === "game" && target === "game") { name = S.players.splice(from, 1)[0]; S.players.splice(idx, 0, name); }
+        else if (kind === "game" && target === "bench") { name = S.players.splice(from, 1)[0]; if (String(name).trim()) S.bench.unshift(name); toast(name + " is sitting out"); }
+        else if (kind === "bench" && target === "game") {
+          if (cleanPlayers().length >= 20) toast("20 players is the maximum");
+          else { name = S.bench.splice(from, 1)[0]; S.players.splice(idx, 0, name); toast(name + " joined the game"); }
+        }
+        save(); render();
       }
-      grip.addEventListener("pointermove", move);
-      grip.addEventListener("pointerup", up);
-      grip.addEventListener("pointercancel", up);
-    });
+      cap.addEventListener("pointermove", move); cap.addEventListener("pointerup", up); cap.addEventListener("pointercancel", up);
+    }
+    game.addEventListener("pointerdown", onDown);
+    bench.addEventListener("pointerdown", onDown);
   }
+
   function top(title, left, right) { return '<div class="top">' + (left || "") + "<h2>" + title + "</h2>" + (right || "") + "</div>"; }
   function backBtn(act) { return '<button class="ib" data-act="' + act + '" aria-label="Back">' + icon("back") + "</button>"; }
   function quitBtn() { return '<button class="ib" data-act="quit" aria-label="Quit round">' + icon("close") + "</button>"; }
@@ -404,7 +431,7 @@
       "<p>Everyone gets the same secret word — except the imposter. Give clues, read faces, and vote them out.</p></div>" +
       (leader ? '<div class="matchbar">' + icon("crown") + "<span>" + leader + "</span></div>" : "") +
       '<div class="list">' +
-      li("players", "users", "#8FC6FF", "#3A74D0", "Players", players.length ? plural(players.length, "player") + " · " + esc(names) : "Add players", players.length ? stack : "") +
+      li("players", "users", "#8FC6FF", "#3A74D0", "Players", players.length ? plural(players.length, "player") + " · " + esc(names) + (S.bench.length ? " · " + S.bench.length + " on bench" : "") : "Add players", players.length ? stack : "") +
       li("categories", "film", "#F8C95C", "#EF7D3C", "Categories", (packs.length === 1 ? "1 category" : packs.length + " categories") + " · " + words + " words", "") +
       li("settings", "sliders", "#C7AEFF", "#8253EE", "Game settings", modeName + " · " + plural(k, "imposter") + (extras.length ? " · " + extras.join(", ") : ""), "") +
       "</div>" +
@@ -426,18 +453,29 @@
   }
 
   /* ---------- players ---------- */
+  // S.players = playing this game (in seating order); S.bench = saved players sitting out.
   VIEWS.players = function () {
+    if (!S.bench) S.bench = [];
     var rows = S.players.map(function (p, i) {
-      return '<div class="player" data-row="' + i + '"><span class="grip" data-grip="' + i + '" aria-label="Drag to reorder">' + icon("grip") + '</span><span class="num">' + (i + 1) + "</span>" + avatar(p, i) + '<input value="' + esc(p) + '" data-pi="' + i + '" maxlength="16" aria-label="Player name" />' +
-        '<button class="ib" data-act="delp" data-i="' + i + '" aria-label="Remove">' + icon("trash") + "</button></div>";
+      return '<div class="player" data-row="' + i + '"><span class="grip" data-grip="' + i + '" aria-label="Drag to move">' + icon("grip") + '</span><span class="num">' + (i + 1) + "</span>" + avatar(p) +
+        '<input value="' + esc(p) + '" data-pi="' + i + '" maxlength="16" aria-label="Player name" />' +
+        '<button class="ib" data-act="benchp" data-i="' + i + '" aria-label="Move to bench">' + icon("benchdown") + "</button></div>";
     }).join("");
-    return top("Players", backBtn("home"), '<span class="count">' + cleanPlayers().length + " / 20</span>") +
-      '<p class="muted">Add everyone in the order you’re sitting — the phone is passed around the circle. Drag the <b style="color:var(--text)">⋮⋮</b> handle to change the order.</p>' +
-      '<div class="players">' + rows + "</div>" +
-      '<div class="addrow"><input id="newp" placeholder="Add a player" maxlength="16" enterkeyhint="done" autocomplete="off" />' +
+    if (!rows) rows = '<div class="emptyzone">' + icon("users") + "<span>No one is playing yet. Tap names on the bench below, drag them up here, or add someone new.</span></div>";
+    var chips = S.bench.map(function (p, i) {
+      return '<div class="bchip" data-b="' + i + '">' + avatar(p) + '<span class="bn">' + esc(p) + '</span><button class="bx" data-act="delbench" data-b="' + i + '" aria-label="Delete ' + esc(p) + '">' + icon("close") + "</button></div>";
+    }).join("");
+    var n = cleanPlayers().length;
+    return top("Players", backBtn("home"), '<span class="count">' + n + " playing</span>") +
+      '<p class="muted">Drag the <b style="color:var(--text)">⋮⋮</b> handle to set the seating order. Drag someone down to the bench to sit out, and pull them back up when they join again.</p>' +
+      '<div class="section-h"><div class="eyebrow">Playing this game · ' + n + '</div></div>' +
+      '<div class="players" id="gamelist">' + rows + "</div>" +
+      '<div class="addrow"><input id="newp" placeholder="Add a new player" maxlength="16" enterkeyhint="done" autocomplete="off" />' +
       '<button class="btn" data-act="addp" aria-label="Add player">' + icon("plus") + "</button></div>" +
-      (S.players.length ? '<button class="link" data-act="clearp" style="align-self:center;color:var(--dim)">Remove all players</button>' : "") +
-      '<div class="footer"><button class="btn" data-act="home">' + icon("check") + "Done</button></div>";
+      '<div class="section-h"><div><div class="eyebrow">Bench · ' + S.bench.length + '</div><div class="dim">Saved players — tap to add to this game</div></div>' +
+      (S.bench.length ? '<button class="link" data-act="allin">Add everyone</button>' : (S.players.length ? '<button class="link" data-act="allout">Bench everyone</button>' : "")) + "</div>" +
+      '<div class="bench" id="benchlist">' + (chips || '<div class="emptyzone small">' + icon("benchdown") + "<span>Drag a player here to sit them out. They stay saved for next time.</span></div>") + "</div>" +
+      '<div class="footer"><button class="btn" data-act="home">' + icon("check") + "Done · " + plural(n, "player") + "</button></div>";
   };
 
   /* ---------- categories ---------- */
@@ -944,6 +982,8 @@
     readPlayers();
     if (S.players.length >= 20) { toast("20 players is the maximum"); return; }
     if (S.players.some(function (p) { return p.trim().toLowerCase() === v.toLowerCase(); })) { toast(v + " is already in the game"); return; }
+    var bi = S.bench.map(function (p) { return p.toLowerCase(); }).indexOf(v.toLowerCase());
+    if (bi >= 0) { v = S.bench.splice(bi, 1)[0]; toast(v + " is back from the bench"); }
     S.players.push(v); save(); render();
     var n = document.getElementById("newp"); if (n) n.focus();
   }
@@ -953,6 +993,9 @@
   function lockVote(v) { R.voted = v; R.revealed = false; go("reveal"); }
 
   document.addEventListener("click", function (e) {
+    if (suppressClick) return;
+    var chipTap = e.target.closest(".bchip");
+    if (chipTap && !e.target.closest(".bx")) { chipTap.setAttribute("data-act", "unbench"); }
     var el = e.target.closest("[data-act]");
     if (!el || el.disabled) return;
     var a = el.getAttribute("data-act");
@@ -963,8 +1006,24 @@
       case "how": howTo(); break;
       case "close": closeModal(); break;
       case "addp": addPlayer(); break;
-      case "delp": S.players.splice(+el.getAttribute("data-i"), 1); save(); render(); break;
-      case "clearp": S.players = []; save(); render(); break;
+      case "benchp": { var bn = S.players.splice(+el.getAttribute("data-i"), 1)[0]; if (String(bn).trim()) S.bench.unshift(bn.trim()); save(); render(); break; }
+      case "unbench": {
+        if (cleanPlayers().length >= 20) { toast("20 players is the maximum"); break; }
+        S.players.push(S.bench.splice(+el.getAttribute("data-b"), 1)[0]); vibrate(10); save(); render(); break;
+      }
+      case "delbench": {
+        var di = +el.getAttribute("data-b"), dn = S.bench[di];
+        openModal("<h2>Delete " + esc(dn) + "?</h2><p>They’ll be removed from your saved players. Their scores stay on the scoreboard.</p>" +
+          '<div class="acts"><button class="btn ghost" data-act="close">Keep</button><button class="btn red" data-act="dodelbench" data-b="' + di + '">Delete</button></div>');
+        break;
+      }
+      case "dodelbench": S.bench.splice(+el.getAttribute("data-b"), 1); save(); closeModal(); render(); break;
+      case "allin": {
+        var room = 20 - cleanPlayers().length, moved = S.bench.splice(0, room);
+        S.players = cleanPlayers().concat(moved); save(); render();
+        if (S.bench.length) toast("20 players is the maximum"); break;
+      }
+      case "allout": S.bench = cleanPlayers().concat(S.bench); S.players = []; save(); render(); break;
       case "pack": {
         var id = el.getAttribute("data-id"), k = S.packs.indexOf(id);
         if (id === CUSTOM_ID && k < 0 && customPack().words.length < 2) { editCustom(); break; }
