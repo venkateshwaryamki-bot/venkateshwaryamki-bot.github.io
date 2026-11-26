@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="chakra_bg">#FF0B1129</color>
+    <color name="chakra_icon_bg">#FF0D1530</color>
+    <style name="ChakraTheme" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/chakra_bg</item>
+        <item name="android:colorBackground">@color/chakra_bg</item>
+        <item name="android:statusBarColor">@color/chakra_bg</item>
+        <item name="android:navigationBarColor">@color/chakra_bg</item>
+        <item name="android:colorAccent">#FFD9B25A</item>
+        <item name="android:colorPrimary">#FF0B1129</item>
+        <item name="android:colorPrimaryDark">#FF0B1129</item>
+    </style>
+</resources>

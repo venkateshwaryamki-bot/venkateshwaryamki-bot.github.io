@@ -1120,6 +1120,18 @@ buildBoard(); buildRules(); renderSeats(); paintSoundBtn(); paintDie(6);
 S = { players: KINGDOMS.map((k,i)=>({mode:'ai',champ:seatChamps[i],tokens:[0,1,2,3].map(()=>({rel:-1,shield:0})),hand:[]})), cur:0, phase:'idle', die:6, moves:[], pending:null, log:[], over:false };
 render();
 window.__chakravyuh = { get state(){ return S; }, render };
+// Android back button: close what is open before leaving the app. Returns true when it handled the press.
+window.chakraBack = () => {
+  if($('#rules').classList.contains('open')){ close('rules'); return true; }
+  if(S && S.phase==='target'){ cancelCard(); return true; }
+  const started = S && S.log && S.log.length>0;
+  if(started && $('#victory').classList.contains('open')){ close('victory'); return true; }
+  if(started && $('#setup').classList.contains('open')){ close('setup'); return true; }
+  // mid-game, an accidental back press should not throw the war away
+  if(started && !S.over && Date.now()-lastBack > 2000){ lastBack=Date.now(); banner('Leave the war?','Press back again to exit'); return true; }
+  return false;
+};
+let lastBack = 0;
 })();
 </script>
 </body>
