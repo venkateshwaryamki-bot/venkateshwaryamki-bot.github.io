@@ -5,8 +5,10 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Vibrator;
 import android.view.View;
 import android.view.WindowManager;
+import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
@@ -35,6 +37,7 @@ public class MainActivity extends Activity {
         s.setTextZoom(100);
         s.setMediaPlaybackRequiresUserGesture(true);
 
+        web.addJavascriptInterface(new Bridge(), "ChakraAndroid");
         web.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -76,5 +79,20 @@ public class MainActivity extends Activity {
                 if (!"1".equals(v)) MainActivity.super.onBackPressed();
             }
         });
+    }
+
+    /** Methods callable from JavaScript as window.ChakraAndroid.* */
+    private class Bridge {
+        /** A short haptic tick for rolls, captures and Astras. */
+        @JavascriptInterface
+        public void vibrate(int ms) {
+            try {
+                Vibrator v = (Vibrator) getSystemService(VIBRATOR_SERVICE);
+                if (v == null || !v.hasVibrator()) return;
+                int d = Math.max(5, Math.min(ms, 120));
+                // The one-shot duration call works on every Android version this app supports.
+                v.vibrate(d);
+            } catch (Exception ignored) { }
+        }
     }
 }

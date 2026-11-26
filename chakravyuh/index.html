@@ -71,15 +71,16 @@ button{font:inherit;color:inherit}
 .panel h3{margin:0 0 10px;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:700}
 
 /* ---------- board: miniature-painting frame ---------- */
+.arena{width:min(100%, calc(100vh - 110px)); min-width:280px; max-width:780px; display:flex; flex-direction:column; gap:8px}
 .board{
-  width:min(100%, calc(100vh - 110px)); min-width:280px; max-width:780px; aspect-ratio:1; max-height:none;
+  width:100%; aspect-ratio:1; max-width:100%;
   padding:2.6%; border-radius:18px; position:relative;
   background:
     radial-gradient(circle, rgba(240,207,126,.55) 0 1.4px, transparent 1.8px) 0 0/14px 14px,
     linear-gradient(145deg,var(--maroon),var(--maroon-deep));
   box-shadow:var(--shadow), inset 0 0 0 2px #d9b25a, inset 0 0 0 5px var(--maroon-deep), inset 0 0 0 6px rgba(217,178,90,.7);
 }
-@media (max-width:900px){ .board{width:100%;max-width:640px} }
+@media (max-width:900px){ .arena{width:100%;max-width:640px} }
 .grid{position:relative;width:100%;height:100%;background:var(--ivory);border-radius:6px;overflow:hidden;
   box-shadow:0 0 0 2px #d9b25a, 0 0 0 4px var(--maroon-deep), 0 0 0 5px #d9b25a}
 .cell{position:absolute;width:calc(100%/15);height:calc(100%/15);border:1px solid var(--cell-line);background:var(--ivory);display:grid;place-items:center}
@@ -216,8 +217,7 @@ button{font:inherit;color:inherit}
 .eyebrow{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:700}
 .lede{color:var(--muted);margin:10px 0 18px;max-width:64ch}
 .seats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-@media (max-width:760px){.seats{grid-template-columns:repeat(2,1fr)}.sheet{padding:18px}.sheet h2{font-size:32px}}
-@media (max-width:420px){.seats{grid-template-columns:1fr}}
+
 .seat{border-radius:14px;padding:12px;border:1px solid var(--line);background:var(--panel2);display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden;min-width:0}
 .seat::before{content:"";position:absolute;inset:0 0 auto;height:5px;background:var(--pc)}
 .seat .kn{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;font-weight:700;color:color-mix(in srgb, var(--pc) 65%, var(--ink))}
@@ -254,16 +254,129 @@ button{font:inherit;color:inherit}
 .podium .prow{background:var(--panel2)}
 .place{font-family:var(--display);font-size:22px;width:28px;text-align:center;color:var(--gold)}
 .foot-note{font-size:13px;color:var(--muted);text-align:center}
+.champ .ctext{min-width:0}
+
+/* ---------- phone app layout ---------- */
+.m-only,.plaques,.dock{display:none}
+.plaques{justify-content:space-between;gap:8px}
+.plaque{display:flex;align-items:center;gap:8px;flex:0 1 50%;min-width:0;padding:4px 10px 4px 4px;border-radius:999px;background:var(--panel);
+  border:1px solid var(--line);box-shadow:0 4px 12px rgba(0,0,0,.12);transition:box-shadow .25s, border-color .25s, opacity .25s}
+.plaque.right{flex-direction:row-reverse;padding:4px 4px 4px 10px;text-align:right}
+.plaque .pav{width:40px;height:40px;border-radius:50%;flex:none;display:grid;place-items:center;color:#fff6dc;
+  background:radial-gradient(circle at 50% 55%, var(--pc), color-mix(in srgb, var(--pc) 55%, #000));box-shadow:inset 0 0 0 1.5px #f0cf7e}
+.plaque .pav svg{width:20px;height:20px}
+.plaque .ptxt{min-width:0;flex:1}
+.plaque .pn{font-family:var(--display);font-size:16.5px;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plaque .pk{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.plaque .pst{display:flex;align-items:center;gap:8px;margin-top:3px}
+.plaque.right .pst{justify-content:flex-end}
+.plaque .tag{font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 4px;line-height:14px}
+.plaque .pips i{width:6px;height:6px}
+.gem{display:inline-flex;align-items:center;gap:3px;font-size:11px;font-weight:700;color:var(--gold)}
+.gem::before{content:"";width:7px;height:7px;transform:rotate(45deg);background:var(--gold);border-radius:1px}
+.plaque.cur{border-color:var(--pc);box-shadow:0 0 0 1.5px var(--pc), 0 0 18px color-mix(in srgb, var(--pc) 55%, transparent)}
+.plaque.cur .pav{animation:breathe 1.6s ease-in-out infinite}
+@keyframes breathe{50%{box-shadow:inset 0 0 0 1.5px #f0cf7e, 0 0 0 4px color-mix(in srgb, var(--pc) 35%, transparent)}}
+.plaque.off{opacity:.35}
+
+.dock{flex-direction:column;gap:9px;background:var(--panel);border-top:1px solid var(--line);border-radius:24px 24px 0 0;
+  box-shadow:0 -10px 30px rgba(0,0,0,.18), inset 0 1px 0 var(--gold-soft);position:relative;
+  margin-inline:calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  padding:10px max(16px, env(safe-area-inset-left, 0px)) calc(12px + env(safe-area-inset-bottom, 0px))}
+.dock::before{content:"";position:absolute;left:50%;top:0;width:90px;height:2px;transform:translateX(-50%);background:linear-gradient(90deg,transparent,var(--gold),transparent)}
+.ticker{font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:14px;position:relative;min-height:19px}
+.ticker::before{content:"";position:absolute;left:2px;top:6px;width:6px;height:6px;transform:rotate(45deg);background:var(--lc,var(--gold))}
+.ticker b{font-weight:700}
+.ticker.new{animation:tick .45s ease}
+@keyframes tick{from{opacity:0;transform:translateY(6px)}}
+.dock-row{display:flex;align-items:center;gap:14px}
+.dock .die{width:66px;height:66px;padding:10px;border-radius:15px}
+.dock .pip{width:10px;height:10px}
+.dock-mid{flex:1;min-width:0}
+.dock .hint{min-height:0;font-size:15px}
+.dock .hint .sub{font-size:12.5px}
+.dock .actions{margin-top:6px}
+.dock .actions:not(:has(button:not([hidden]))){display:none}
+.dock .pick{margin-top:0}
+.tray{display:flex;align-items:center;gap:10px;min-height:44px}
+.tray-label{flex:none;display:flex;flex-direction:column;align-items:center;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:700;line-height:1.2}
+.tray-label b{font-family:var(--display);font-size:16px;letter-spacing:0;color:var(--ink);font-weight:400}
+.tray-row{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;flex:1;min-width:0;padding:3px 2px}
+.tray-row::-webkit-scrollbar{display:none}
+.astra{flex:none;display:flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;border-radius:999px;cursor:pointer;color:#fff8e6;
+  background:linear-gradient(150deg,var(--c1),var(--c2));border:1px solid rgba(240,207,126,.55);font-family:var(--display);font-size:15px;line-height:1;
+  box-shadow:0 3px 8px rgba(0,0,0,.2);transition:transform .15s, box-shadow .2s, filter .2s}
+.astra .ai{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:rgba(0,0,0,.22);box-shadow:inset 0 0 0 1px rgba(240,207,126,.7)}
+.astra .ai svg{width:18px;height:18px}
+.astra:active{transform:scale(.96)}
+.astra.ok{box-shadow:0 0 0 2px #f0cf7e, 0 0 14px rgba(240,207,126,.55)}
+.astra.dim{filter:saturate(.55) brightness(.85)}
+.astra.sel{box-shadow:0 0 0 3px #fff, 0 0 0 5px #7a2a9a}
+.astra.back{background:radial-gradient(circle, rgba(240,207,126,.25) 0 1px, transparent 1.4px) 0 0/9px 9px, linear-gradient(150deg,#1b2550,#0d1530);padding:5px;color:#d9b25a;cursor:default}
+.astra.back .ai{background:none;box-shadow:none}
+.tray-empty{font-size:13px;color:var(--muted)}
+
+/* bottom sheets */
+.modal.bs{align-items:flex-end;padding:0}
+.modal.bs .sheet{border-radius:24px 24px 0 0;width:min(560px,100%);padding:10px 20px calc(18px + env(safe-area-inset-bottom, 0px));animation:rise .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes rise{from{transform:translateY(40px);opacity:0}}
+.grab{width:40px;height:4px;border-radius:4px;background:var(--line);margin:0 auto 14px}
+.cs-body .card{min-height:0;cursor:default;padding:16px}
+.cs-body .card .cn{font-size:24px}
+.cs-body .card .ct{font-size:14.5px}
+.cs-body .card .lore{font-size:13px}
+.why{font-size:13.5px;color:var(--muted);margin:10px 2px 0;min-height:1em}
+.menu-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.mbtn{display:flex;align-items:center;gap:10px;padding:12px;border-radius:14px;border:1px solid var(--line);background:var(--panel2);cursor:pointer;font-weight:600;font-size:15px;text-align:left}
+.mbtn svg{width:20px;height:20px;color:var(--gold);flex:none}
+.sec{margin:18px 0 8px;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:700}
+#log2{max-height:40vh}
+
+@media (max-width:760px){
+  html,body{height:100%;overflow:hidden}
+  .app{display:flex;flex-direction:column;align-items:stretch;gap:8px;height:100%;height:100dvh;padding-block:calc(8px + env(safe-area-inset-top, 0px)) 0}
+  .side{display:contents}
+  .side>.panel,.d-only,.foot-note{display:none}
+  .m-only{display:grid}
+  .topbar{order:0;flex:none}
+  .brand h1{font-size:25px}
+  .brand small{font-size:10.5px;margin-top:2px}
+  .board-col{order:1;flex:1 1 0;min-height:0;justify-content:center;overflow:hidden}
+  .arena{width:100%;min-width:0;max-width:none}
+  .plaques{display:flex}
+  .board{padding:2.2%;border-radius:14px}
+  .dock{order:2;display:flex;flex:none}
+  .modal{align-items:flex-end;padding:0}
+  .modal .sheet{border-radius:24px 24px 0 0;max-height:92vh;max-height:92dvh;padding:18px 16px calc(18px + env(safe-area-inset-bottom, 0px));animation:rise .3s cubic-bezier(.2,.8,.2,1)}
+  .sheet h2{font-size:32px}
+  .lede{font-size:14.5px;margin:8px 0 14px}
+  .seats{grid-template-columns:1fr;gap:8px}
+  .seat{display:grid;grid-template-columns:1fr auto;grid-template-areas:"kn seg" "champ champ" "sp sp";gap:6px 10px;padding:12px}
+  .seat .kn{grid-area:kn;align-self:center}
+  .seat .seg{grid-area:seg;margin:0;width:180px}
+  .seat .champ{grid-area:champ}
+  .seat .sp{grid-area:sp;min-height:0;font-size:12.5px;color:var(--muted)}
+  .champ .cbody{display:flex;align-items:center;gap:10px;text-align:left}
+  .champ .avatar{margin:0;width:42px;height:42px}
+  .sheet-foot{position:sticky;bottom:calc(-18px - env(safe-area-inset-bottom, 0px));background:var(--panel);margin:12px -16px calc(-18px - env(safe-area-inset-bottom, 0px));padding:12px 16px calc(14px + env(safe-area-inset-bottom, 0px));border-top:1px solid var(--line)}
+  #btnRules2{display:none}
+  .lex{grid-template-columns:1fr}
+}
+@media (max-width:760px) and (max-height:680px){ .ticker{display:none} .dock{gap:7px;padding-top:8px} .dock .die{width:58px;height:58px;padding:9px} }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="board-col">
-    <div class="board" id="board">
-      <div class="grid" id="grid">
-        <div class="flash" id="flash"></div>
-        <div class="banner" id="banner"><div class="b-title"></div><div class="b-sub"></div></div>
+    <div class="arena">
+      <div class="plaques"><div class="plaque" data-seat="0"></div><div class="plaque right" data-seat="1"></div></div>
+      <div class="board" id="board">
+        <div class="grid" id="grid">
+          <div class="flash" id="flash"></div>
+          <div class="banner" id="banner"><div class="b-title"></div><div class="b-sub"></div></div>
+        </div>
       </div>
+      <div class="plaques"><div class="plaque" data-seat="3"></div><div class="plaque right" data-seat="2"></div></div>
     </div>
     <div class="foot-note">Space to roll · Esc cancels an Astra · Tap a glowing piece to move</div>
   </div>
@@ -276,9 +389,10 @@ button{font:inherit;color:inherit}
       </div>
       <div class="tb-actions">
         <button class="icon-btn" id="btnRules" title="How to play" aria-label="How to play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .9-1 1.6V14"/><circle cx="12" cy="17.5" r=".6" fill="currentColor"/></svg></button>
-        <button class="icon-btn" id="btnSound" title="Sound" aria-label="Toggle sound"></button>
-        <button class="icon-btn" id="btnTheme" title="Theme" aria-label="Toggle light or dark theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>
-        <button class="icon-btn" id="btnNew" title="New game" aria-label="New game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/></svg></button>
+        <button class="icon-btn d-only" id="btnSound" title="Sound" aria-label="Toggle sound"></button>
+        <button class="icon-btn d-only" id="btnTheme" title="Theme" aria-label="Toggle light or dark theme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg></button>
+        <button class="icon-btn d-only" id="btnNew" title="New game" aria-label="New game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/></svg></button>
+        <button class="icon-btn m-only" id="btnMenu" title="Menu" aria-label="Menu"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg></button>
       </div>
     </div>
 
@@ -319,6 +433,50 @@ button{font:inherit;color:inherit}
       <ul class="log" id="log"></ul>
     </section>
   </aside>
+
+  <div class="dock" id="dock">
+    <div class="ticker" id="ticker" aria-live="polite"></div>
+    <div class="dock-row">
+      <button class="die" id="die2" aria-label="Roll the die"></button>
+      <div class="dock-mid">
+        <div class="hint" id="mHint"></div>
+        <div class="actions">
+          <button class="btn" id="mReroll" hidden>Re-roll</button>
+          <button class="btn ghost" id="mCancel" hidden>Cancel Astra</button>
+        </div>
+      </div>
+    </div>
+    <div class="pick" id="mPick" hidden></div>
+    <div class="tray" id="tray"></div>
+  </div>
+</div>
+
+<!-- Astra detail (phone) -->
+<div class="modal bs" id="cardSheet" role="dialog" aria-modal="true" aria-label="Astra">
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="cs-body" id="cardSheetBody"></div>
+    <p class="why" id="invokeWhy"></p>
+    <div class="actions" style="justify-content:flex-end;margin-top:12px">
+      <button class="btn ghost" data-close="cardSheet">Close</button>
+      <button class="btn primary" id="btnInvoke">Invoke Astra</button>
+    </div>
+  </div>
+</div>
+
+<!-- Menu (phone) -->
+<div class="modal bs" id="menuSheet" role="dialog" aria-modal="true" aria-label="Menu">
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="menu-grid">
+      <button class="mbtn" id="mNew"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4h4"/></svg>New game</button>
+      <button class="mbtn" id="mRules"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5"/></svg>How to play</button>
+      <button class="mbtn" id="mSound"></button>
+      <button class="mbtn" id="mTheme"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>Light / dark</button>
+    </div>
+    <h3 class="sec">Chronicle of the war</h3>
+    <ul class="log" id="log2"></ul>
+  </div>
 </div>
 
 <!-- Setup -->
@@ -542,6 +700,9 @@ const sfx = {
   home(){ [523,659,784,1046].forEach((f,i)=>tone(f,.2,'triangle',.06,i*.09)); },
   fail(){ tone(180,.25,'square',.04); },
 };
+// Gentle haptics on the phone (the Android app exposes ChakraAndroid; browsers may support navigator.vibrate)
+function buzz(ms){ if(!soundOn) return; try{ if(window.ChakraAndroid) window.ChakraAndroid.vibrate(ms); else if(navigator.vibrate) navigator.vibrate(ms); }catch(e){} }
+['roll','capture','astra','home','enter'].forEach(k=>{ const f=sfx[k], ms={roll:12,capture:45,astra:25,home:30,enter:10}[k]; sfx[k]=(...a)=>{ buzz(ms); return f(...a); }; });
 function paintSoundBtn(){ $('#btnSound').innerHTML = soundOn?I.soundOn:I.soundOff; }
 
 /* ================= Theme ================= */
@@ -651,7 +812,7 @@ function startTurn(){
   p.tokens.forEach(t=>{ if(t.shield>0) t.shield--; });
   S.sixes=0; S.cardPlayed=false; S.ratha=false; S.rathaUsed=false; S.shakuni=false; S.rerolled=false; S.pending=null; S.moves=[];
   S.phase='roll'; render();
-  if(isAI(S.cur)) later(aiRollPhase, 750);
+  if(isAI(S.cur)) later(aiRollPhase, 750); else buzz(18);
 }
 function continueTurn(){ S.phase='roll'; S.moves=[]; render(); if(isAI(S.cur)) later(aiRollPhase, 700); }
 function endTurn(){ S.phase='idle'; S.moves=[]; render(); later(nextTurn, 450); }
@@ -661,7 +822,7 @@ function doRoll(){
   if(!S || S.phase!=='roll' || S.over) return;
   if(S.shakuni){ S.phase='pick'; render(); if(isAI(S.cur)) later(aiPick, 600); return; }
   S.phase='rolling'; render();
-  const die=$('#die'); die.classList.remove('rolling'); void die.offsetWidth; die.classList.add('rolling');
+  document.querySelectorAll('.die').forEach(die=>{ die.classList.remove('rolling'); void die.offsetWidth; die.classList.add('rolling'); });
   sfx.roll();
   let n=0; const spin = setInterval(()=>{ paintDie(1+Math.floor(Math.random()*6)); if(++n>7) clearInterval(spin); }, 60);
   later(() => {
@@ -980,13 +1141,15 @@ function renderTokens(){
 }
 function paintDie(v){
   const on = {1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]}[v];
-  $('#die').innerHTML = Array.from({length:9},(_,k)=>`<span class="pip ${on.includes(k)?'on':''}"></span>`).join('');
+  const html = Array.from({length:9},(_,k)=>`<span class="pip ${on.includes(k)?'on':''}"></span>`).join('');
+  document.querySelectorAll('.die').forEach(d=>d.innerHTML=html);
 }
 function cardHTML(k, opts={}){
   const K=CARDS[k];
-  return `<button class="card ${opts.sel?'sel':''}" style="--c1:${K.c1};--c2:${K.c2}" ${opts.disabled?'disabled':''} ${opts.idx!=null?`data-idx="${opts.idx}"`:''} title="${esc(K.lore)}">
+  const tag = opts.tag || 'button';
+  return `<${tag} class="card ${opts.sel?'sel':''}" style="--c1:${K.c1};--c2:${K.c2}" ${opts.disabled?'disabled':''} ${opts.idx!=null?`data-idx="${opts.idx}"`:''} title="${esc(K.lore)}">
     <span class="rar">${K.rar}</span><div class="ci">${I[k]}</div><div class="cn">${K.name}</div><div class="cs">${K.sub}</div><div class="ct">${K.text}</div>
-    ${opts.lore?`<div class="lore">${K.lore}</div>`:''}</button>`;
+    ${opts.lore?`<div class="lore">${K.lore}</div>`:''}</${tag}>`;
 }
 function render(){
   if(!S) return;
@@ -1000,43 +1163,56 @@ function render(){
   for(let k=0;k<4;k++){ const y=$('#yard'+k); y.classList.toggle('off', S.players[k].mode==='off'); y.classList.toggle('turn', k===S.cur && !S.over);
     y.querySelector('.cname').textContent = CHAMPS[S.players[k].champ].name; }
 
-  const die=$('#die'); paintDie(S.die);
+  paintDie(S.die);
   const canRoll = S.phase==='roll' && human && !S.over;
-  die.disabled=!canRoll; die.classList.toggle('ready', canRoll); die.classList.toggle('ratha', S.ratha);
+  document.querySelectorAll('.die').forEach(d=>{ d.disabled=!canRoll; d.classList.toggle('ready', canRoll); d.classList.toggle('ratha', !!S.ratha); });
   let hint='', sub='';
   if(S.over) hint='The war is over.';
-  else if(!human){ hint=`${CH.name} weighs the next move…`; sub='The AI is taking its turn.'; }
-  else if(S.phase==='roll'){ hint = S.cardPlayed||!p.hand.length ? 'Roll the die.' : 'Play an Astra, or roll the die.';
-    sub = S.shakuni ? 'Shakuni\'s Dice: you will choose the number.' : S.cardPlayed ? 'You have played your Astra this turn.' : (p.tokens.every(t=>t.rel===-1) ? `You need a ${leaveVals(pi).join(' or ')} to leave the palace.` : ''); }
+  else if(S.cur<0 || S.phase==='idle' && !S.log.length) hint='Choose your champions to begin.';
+  else if(!human){ hint=`${CH.name} weighs the next move…`; sub=`${K.name} is played by the AI.`; }
+  else if(S.phase==='roll'){ hint = S.cardPlayed||!p.hand.length ? 'Roll the die.' : 'Invoke an Astra, or roll the die.';
+    sub = S.shakuni ? 'Shakuni\'s Dice: you will choose the number.' : S.cardPlayed ? 'You have invoked your Astra this turn.' : (p.tokens.every(t=>t.rel===-1) ? `You need a ${leaveVals(pi).join(' or ')} to leave the palace.` : ''); }
   else if(S.phase==='pick'){ hint='Shakuni\'s Dice: choose your number.'; }
-  else if(S.phase==='move'){ hint=`You rolled ${S.die}${S.amt!==S.die?` (moves ${S.amt})`:''}. Pick a glowing piece.`;
+  else if(S.phase==='move'){ hint=`You rolled ${S.die}${S.amt!==S.die?` (moves ${S.amt})`:''}. Tap a glowing piece.`;
     if(canReroll()) sub='Krishna\'s counsel: you may throw again instead.'; }
   else if(S.phase==='target'){ const k=S.pending.key; hint=`${CARDS[k].name}: choose a target.`;
     sub = k==='maya' ? (S.pending.first?'Now choose the opponent piece to swap with.':'First choose one of your own pieces.') :
           ['kavacha','vyuha'].includes(k)?'Choose one of your pieces.':'Choose an opponent piece.'; }
   else if(S.phase==='rolling') hint='The die tumbles…';
-  $('#hint').innerHTML = esc(hint) + (sub?`<span class="sub">${esc(sub)}</span>`:'') + (S.ratha?'<span class="chip">Ratha Vega: next roll ×2</span>':'');
-  $('#btnCancel').hidden = !(S.phase==='target' && human);
-  $('#btnReroll').hidden = !(human && canReroll() && S.moves.length);
-  const pick=$('#pick');
-  pick.hidden = !(S.phase==='pick' && human);
-  if(!pick.hidden && !pick.childElementCount){ pick.innerHTML=[1,2,3,4,5,6].map(v=>`<button data-v="${v}" aria-label="Choose ${v}">${v}</button>`).join(''); pick.querySelectorAll('button').forEach(b=>b.onclick=()=>pickRoll(+b.dataset.v)); }
-  if(pick.hidden) pick.innerHTML='';
+  const hintHTML = esc(hint) + (sub?`<span class="sub">${esc(sub)}</span>`:'') + (S.ratha?'<span class="chip">Ratha Vega: next roll ×2</span>':'');
+  $('#hint').innerHTML = hintHTML; $('#mHint').innerHTML = hintHTML;
+  const showCancel = S.phase==='target' && human, showReroll = !!(human && canReroll() && S.moves.length);
+  $('#btnCancel').hidden = $('#mCancel').hidden = !showCancel;
+  $('#btnReroll').hidden = $('#mReroll').hidden = !showReroll;
+  document.querySelectorAll('.pick').forEach(pick=>{
+    pick.hidden = !(S.phase==='pick' && human);
+    if(!pick.hidden && !pick.childElementCount){ pick.innerHTML=[1,2,3,4,5,6].map(v=>`<button data-v="${v}" aria-label="Choose ${v}">${v}</button>`).join(''); pick.querySelectorAll('button').forEach(b=>b.onclick=()=>pickRoll(+b.dataset.v)); }
+    if(pick.hidden) pick.innerHTML='';
+  });
 
+  // Whose Astras to show: the player on turn if human; with a single human, always theirs.
+  const vp = handViewer(), hv = vp==null ? pi : vp, hp = S.players[hv], HC = CHAMPS[hp.champ];
   const hand=$('#hand');
-  $('#handTitle').textContent = `${CH.name}'s Astras (${p.hand.length}/${handLimit(pi)})`;
-  if(!human){
-    hand.innerHTML = p.hand.length ? p.hand.map(()=>`<div class="card-back">${I.chakra}</div>`).join('') : `<div class="empty">${CH.name} holds no Astras.</div>`;
-  } else if(!p.hand.length){
+  $('#handTitle').textContent = `${HC.name}'s Astras (${hp.hand.length}/${handLimit(hv)})`;
+  if(vp==null){
+    hand.innerHTML = hp.hand.length ? hp.hand.map(()=>`<div class="card-back">${I.chakra}</div>`).join('') : `<div class="empty">${HC.name} holds no Astras.</div>`;
+  } else if(!hp.hand.length){
     hand.innerHTML = `<div class="empty">No Astras yet. Capture a piece or land on a chakra square to draw one.</div>`;
   } else {
-    hand.innerHTML = p.hand.map((k,idx)=>{
-      const playable = S.phase==='roll' && !S.cardPlayed && !S.shakuni && cardTargets(pi,k,null).length>0;
-      const sel = S.phase==='target' && S.pending && S.pending.idx===idx;
-      return cardHTML(k,{idx, disabled:!playable && !sel, sel});
+    hand.innerHTML = hp.hand.map((k,idx)=>{
+      const sel = S.phase==='target' && S.pending && S.pending.idx===idx && hv===S.cur;
+      return cardHTML(k,{idx, disabled:!canPlayNow(hv,k) && !sel, sel});
     }).join('');
     hand.querySelectorAll('.card[data-idx]').forEach(b=>b.onclick=()=>{ if(S.phase==='target') cancelCard(); else playCard(+b.dataset.idx); });
   }
+  const tray=$('#tray');
+  let chips;
+  if(vp==null) chips = hp.hand.length ? hp.hand.map(()=>`<span class="astra back"><span class="ai">${I.chakra}</span></span>`).join('') : `<span class="tray-empty">${esc(HC.name)} holds no Astras.</span>`;
+  else if(!hp.hand.length) chips = `<span class="tray-empty">Capture a piece or land on a chakra square to draw an Astra.</span>`;
+  else chips = hp.hand.map((k,idx)=>{ const C2=CARDS[k], ok=canPlayNow(hv,k), sel=S.phase==='target'&&S.pending&&S.pending.idx===idx&&hv===S.cur;
+      return `<button class="astra ${ok?'ok':'dim'} ${sel?'sel':''}" data-idx="${idx}" style="--c1:${C2.c1};--c2:${C2.c2}" aria-label="${esc(C2.name)}"><span class="ai">${I[k]}</span>${C2.name}</button>`; }).join('');
+  tray.innerHTML = `<div class="tray-label">Astras<b>${hp.hand.length}/${handLimit(hv)}</b></div><div class="tray-row">${chips}</div>`;
+  tray.querySelectorAll('.astra[data-idx]').forEach(b=>b.onclick=()=>{ if(S.phase==='target' && hv===S.cur){ cancelCard(); return; } openCardSheet(hv, +b.dataset.idx); });
 
   $('#plist').innerHTML = S.players.map((q,k)=>{ const kd=KINGDOMS[k], ch=CHAMPS[q.champ]; const home=q.tokens.filter(t=>t.rel===HOME).length;
     return `<div class="prow ${k===S.cur?'cur':''} ${q.mode==='off'?'off':''}" style="--pc:${kd.c}">
@@ -1044,9 +1220,45 @@ function render(){
       <div style="min-width:0"><div class="pname">${ch.name} <span class="pmeta">· ${q.mode==='off'?'absent':q.mode==='ai'?'AI':'Human'}</span></div><div class="pmeta">${kd.name} · ${ch.pname}</div></div>
       <div class="pstat"><span class="pips" title="${home}/4 home">${q.tokens.map(t=>`<i class="${t.rel===HOME?'on':''}"></i>`).join('')}</span>
       <span class="cardcount" title="Astras held">${q.hand.length}</span></div></div>`; }).join('');
+  document.querySelectorAll('.plaque').forEach(el=>{
+    const k=+el.dataset.seat, q=S.players[k], kd=KINGDOMS[k], ch=CHAMPS[q.champ], home=q.tokens.filter(t=>t.rel===HOME).length;
+    el.classList.toggle('cur', k===S.cur && !S.over && S.log.length>0); el.classList.toggle('off', q.mode==='off');
+    el.style.setProperty('--pc', kd.c);
+    el.setAttribute('aria-label', `${ch.name} of ${kd.name}${q.mode==='ai'?', AI':''}: ${home} of 4 home, ${q.hand.length} Astras`);
+    el.innerHTML = `<div class="pav">${I[q.champ]}</div><div class="ptxt"><div class="pn">${ch.name}</div>
+      <div class="pst">${q.mode==='ai'?'<span class="tag">AI</span>':''}<span class="pips">${q.tokens.map(t=>`<i class="${t.rel===HOME?'on':''}"></i>`).join('')}</span><span class="gem">${q.hand.length}</span></div></div>`;
+  });
 
-  $('#log').innerHTML = S.log.slice(0,14).map(l=>`<li style="--lc:${l.pi==null?'var(--gold)':KINGDOMS[l.pi].c}">${l.html}</li>`).join('');
+  const logLi = n => S.log.slice(0,n).map(l=>`<li style="--lc:${l.pi==null?'var(--gold)':KINGDOMS[l.pi].c}">${l.html}</li>`).join('');
+  $('#log').innerHTML = logLi(14); $('#log2').innerHTML = logLi(40);
+  const tk=$('#ticker'), last=S.log[0];
+  if(last && last!==lastTicker){ lastTicker=last; tk.innerHTML=last.html; tk.style.setProperty('--lc', last.pi==null?'var(--gold)':KINGDOMS[last.pi].c); tk.classList.remove('new'); void tk.offsetWidth; tk.classList.add('new'); }
+  else if(!last){ tk.innerHTML=''; lastTicker=null; }
   renderTokens();
+}
+let lastTicker=null;
+function handViewer(){
+  if(S.cur>=0 && !isAI(S.cur)) return S.cur;
+  const hs=S.players.map((q,i)=>q.mode==='human'?i:-1).filter(i=>i>=0);
+  return hs.length===1 ? hs[0] : null;
+}
+function canPlayNow(hv,k){ return hv===S.cur && !isAI(hv) && S.phase==='roll' && !S.cardPlayed && !S.shakuni && !S.over && cardTargets(hv,k,null).length>0; }
+function invokeReason(hv,k){
+  if(S.over) return 'The war is over.';
+  if(hv!==S.cur) return 'Astras are invoked on your own turn, before you roll.';
+  if(S.cardPlayed) return 'You have already invoked an Astra this turn.';
+  if(S.shakuni) return "Shakuni's Dice are already in your hand this turn.";
+  if(S.phase!=='roll') return 'Astras are invoked before you roll.';
+  if(!cardTargets(hv,k,null).length) return 'There is no valid target for this Astra right now.';
+  return '';
+}
+let sheetCtx=null;
+function openCardSheet(hv, idx){
+  const k=S.players[hv].hand[idx]; if(!k) return;
+  sheetCtx={hv, idx, k};
+  $('#cardSheetBody').innerHTML = cardHTML(k,{lore:true, tag:'div'});
+  const ok=canPlayNow(hv,k); $('#btnInvoke').disabled=!ok; $('#invokeWhy').textContent = ok ? 'Invoking it uses your one Astra for this turn.' : invokeReason(hv,k);
+  open('cardSheet');
 }
 function banner(title, sub){
   const b=$('#banner'); b.querySelector('.b-title').textContent=title; b.querySelector('.b-sub').textContent=sub||'';
@@ -1067,7 +1279,7 @@ function renderSeats(){
     <div class="kn">${k.name}</div>
     <div class="champ">
       <button class="arrow" data-s="${s}" data-d="-1" aria-label="Previous champion for ${k.name}">${I.left}</button>
-      <div class="cbody"><div class="avatar" style="--pc:${k.c}">${I[seatChamps[s]]}</div><div class="cname">${ch.name}</div><div class="cepi">${ch.epi}</div></div>
+      <div class="cbody"><div class="avatar" style="--pc:${k.c}">${I[seatChamps[s]]}</div><div class="ctext"><div class="cname">${ch.name}</div><div class="cepi">${ch.epi}</div></div></div>
       <button class="arrow" data-s="${s}" data-d="1" aria-label="Next champion for ${k.name}">${I.right}</button>
     </div>
     <div class="sp"><b>${ch.pname}:</b> ${ch.ptext}</div>
@@ -1104,17 +1316,33 @@ $('#btnRules').onclick = () => open('rules');
 $('#btnRules2').onclick = () => open('rules');
 $('#btnSame').onclick = () => { close('victory'); newGame(S.players.map(p=>p.mode), S.players.map(p=>p.champ)); };
 $('#btnSetup').onclick = () => { close('victory'); renderSeats(); open('setup'); };
-$('#btnCancel').onclick = cancelCard;
-$('#btnReroll').onclick = doReroll;
-$('#die').onclick = doRoll;
+$('#btnCancel').onclick = $('#mCancel').onclick = cancelCard;
+$('#btnReroll').onclick = $('#mReroll').onclick = doReroll;
+$('#die').onclick = $('#die2').onclick = doRoll;
+$('#btnInvoke').onclick = () => { close('cardSheet'); if(!sheetCtx) return; const {hv,idx,k}=sheetCtx; sheetCtx=null; if(S.players[hv].hand[idx]===k && canPlayNow(hv,k)) playCard(idx); };
+$('#btnMenu').onclick = () => { paintMenu(); open('menuSheet'); };
+$('#mNew').onclick = () => { close('menuSheet'); renderSeats(); open('setup'); };
+$('#mRules').onclick = () => { close('menuSheet'); open('rules'); };
+$('#mSound').onclick = () => { soundOn=!soundOn; store.set('sound',soundOn); paintSoundBtn(); paintMenu(); if(soundOn) sfx.card(); };
+$('#mTheme').onclick = () => $('#btnTheme').onclick();
+function paintMenu(){ $('#mSound').innerHTML = (soundOn?I.soundOn:I.soundOff) + (soundOn?'Sound and haptics on':'Sound and haptics off'); }
 $('#btnSound').onclick = () => { soundOn=!soundOn; store.set('sound',soundOn); paintSoundBtn(); if(soundOn) sfx.card(); };
 document.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>close(b.dataset.close));
-document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m && m.id==='rules') close(m.id); }));
+document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{ if(e.target===m && ['rules','cardSheet','menuSheet'].includes(m.id)) close(m.id); }));
 document.addEventListener('keydown', e=>{
-  if(e.key==='Escape'){ if($('#rules').classList.contains('open')) close('rules'); else cancelCard(); }
+  if(e.key==='Escape'){ const o=['cardSheet','menuSheet','rules'].find(id=>$('#'+id).classList.contains('open')); if(o) close(o); else cancelCard(); }
   if((e.key===' '||e.key==='Enter') && document.activeElement===document.body && !document.querySelector('.modal.open')){ e.preventDefault(); doRoll(); }
 });
 
+const phoneMQ = matchMedia('(max-width:760px)');
+function fitArena(){
+  const arena=$('.arena'), col=$('.board-col');
+  if(!phoneMQ.matches){ arena.style.width=''; return; }
+  const pl=[...document.querySelectorAll('.plaques')].reduce((a,e)=>a+e.offsetHeight,0) + 16;
+  arena.style.width = Math.max(200, Math.min(col.clientWidth, col.clientHeight - pl)) + 'px';
+}
+new ResizeObserver(fitArena).observe($('.board-col'));
+phoneMQ.addEventListener('change', fitArena);
 buildBoard(); buildRules(); renderSeats(); paintSoundBtn(); paintDie(6);
 // a resting board behind the setup screen
 S = { players: KINGDOMS.map((k,i)=>({mode:'ai',champ:seatChamps[i],tokens:[0,1,2,3].map(()=>({rel:-1,shield:0})),hand:[]})), cur:0, phase:'idle', die:6, moves:[], pending:null, log:[], over:false };
@@ -1122,7 +1350,7 @@ render();
 window.__chakravyuh = { get state(){ return S; }, render };
 // Android back button: close what is open before leaving the app. Returns true when it handled the press.
 window.chakraBack = () => {
-  if($('#rules').classList.contains('open')){ close('rules'); return true; }
+  for(const id of ['cardSheet','menuSheet','rules']) if($('#'+id).classList.contains('open')){ close(id); return true; }
   if(S && S.phase==='target'){ cancelCard(); return true; }
   const started = S && S.log && S.log.length>0;
   if(started && $('#victory').classList.contains('open')){ close('victory'); return true; }
