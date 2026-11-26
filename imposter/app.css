@@ -403,3 +403,13 @@ textarea:focus { border-color: var(--gold); }
 .stylebar button.on { background: var(--grad); color: #1b1206; }
 .section-h .dim { margin-top: 2px; }
 .section-h + .tiles { margin-top: -2px; }
+
+/* ===== 4.1 drag to reorder, one-look cards ===== */
+.player .grip { width: 26px; height: 40px; margin-left: -6px; display: grid; place-items: center; color: var(--dim); touch-action: none; cursor: grab; flex: none; }
+.player .grip svg { width: 20px; height: 20px; }
+.players .player { transition: transform .18s var(--ease), box-shadow .18s, border-color .18s; }
+.players .player.dragging { transition: none; position: relative; z-index: 5; border-color: var(--gold); background: var(--s2); box-shadow: 0 16px 36px rgba(0,0,0,.55); }
+.players .player.dragging .grip { color: var(--gold); cursor: grabbing; }
+.players.sorting { user-select: none; }
+.card.locked .cover .hold { background: rgba(255,255,255,.05); border-color: var(--line2); color: var(--muted); }
+.card.locked { cursor: default; }

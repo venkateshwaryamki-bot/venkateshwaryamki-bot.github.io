@@ -39,6 +39,8 @@
     close: '<path d="M6 6l12 12M18 6L6 18"/>',
     plus: '<path d="M12 5v14M5 12h14"/>',
     trash: '<path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13"/>',
+    lock: '<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3M12 14.5v2.5"/>',
+    grip: '<path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke-width="3.2"/>',
     eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
     eyeoff: '<path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4M6.5 6.6C3.7 8.4 2 12 2 12s3.5 7 10 7a9.8 9.8 0 0 0 5-1.4M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
     help: '<circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.7M12 17h.01"/>',
@@ -173,7 +175,11 @@
   function shuffle(a) { a = a.slice(); for (var i = a.length - 1; i > 0; i--) { var j = rnd(i + 1), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
   function pick(a) { return a[rnd(a.length)]; }
   function initial(n) { n = String(n).trim(); return n ? n.charAt(0).toUpperCase() : "?"; }
-  function avatar(name, i, cls) { return '<div class="av ' + (cls || "") + '" style="background:' + COLORS[(i < 0 ? 0 : i) % COLORS.length] + '">' + esc(initial(name)) + "</div>"; }
+  function avatar(name, i, cls) {
+    var h = 0, n = String(name).trim().toLowerCase();
+    for (var c = 0; c < n.length; c++) h = (h * 31 + n.charCodeAt(c)) >>> 0;
+    return '<div class="av ' + (cls || "") + '" style="background:' + COLORS[h % COLORS.length] + '">' + esc(initial(name)) + "</div>";
+  }
   function maxImposters(n) { return Math.max(1, Math.floor((n - 1) / 2)); }
   function plural(n, w) { return n + " " + w + (n === 1 ? "" : "s"); }
   function grad(p) { return "linear-gradient(135deg," + p.c1 + "," + p.c2 + ")"; }
@@ -325,6 +331,53 @@
   function render() {
     $app.innerHTML = '<div class="screen">' + VIEWS[screen]() + "</div>";
     if (screen === "discuss") syncTimer();
+    if (screen === "players") bindDrag();
+  }
+
+  /* Drag the grip handle to reorder players (pointer events, so it works with touch). */
+  function bindDrag() {
+    var list = $app.querySelector(".players");
+    if (!list) return;
+    list.addEventListener("pointerdown", function (e) {
+      var grip = e.target.closest("[data-grip]");
+      if (!grip) return;
+      e.preventDefault();
+      readPlayers();
+      var rows = Array.prototype.slice.call(list.children);
+      var from = +grip.getAttribute("data-grip"), to = from, row = rows[from];
+      var step = row.offsetHeight + 8, startY = e.clientY, startScroll = window.scrollY, lastY = e.clientY;
+      row.classList.add("dragging"); list.classList.add("sorting");
+      try { grip.setPointerCapture(e.pointerId); } catch (x) { }
+      vibrate(15);
+      function layout() {
+        var dy = lastY - startY + (window.scrollY - startScroll);
+        dy = Math.max(-from * step, Math.min((rows.length - 1 - from) * step, dy));
+        row.style.transform = "translateY(" + dy + "px)";
+        var t = Math.max(0, Math.min(rows.length - 1, from + Math.round(dy / step)));
+        if (t !== to) { to = t; vibrate(8); }
+        rows.forEach(function (r, i) {
+          if (r === row) return;
+          var shift = from < i && i <= to ? -step : to <= i && i < from ? step : 0;
+          r.style.transform = shift ? "translateY(" + shift + "px)" : "";
+        });
+      }
+      function move(ev) {
+        lastY = ev.clientY;
+        if (ev.clientY > innerHeight - 140) window.scrollBy(0, 10);
+        else if (ev.clientY < 90) window.scrollBy(0, -10);
+        layout();
+      }
+      function up() {
+        grip.removeEventListener("pointermove", move);
+        grip.removeEventListener("pointerup", up);
+        grip.removeEventListener("pointercancel", up);
+        if (to !== from) { var p = S.players.splice(from, 1)[0]; S.players.splice(to, 0, p); save(); }
+        render();
+      }
+      grip.addEventListener("pointermove", move);
+      grip.addEventListener("pointerup", up);
+      grip.addEventListener("pointercancel", up);
+    });
   }
   function top(title, left, right) { return '<div class="top">' + (left || "") + "<h2>" + title + "</h2>" + (right || "") + "</div>"; }
   function backBtn(act) { return '<button class="ib" data-act="' + act + '" aria-label="Back">' + icon("back") + "</button>"; }
@@ -375,11 +428,11 @@
   /* ---------- players ---------- */
   VIEWS.players = function () {
     var rows = S.players.map(function (p, i) {
-      return '<div class="player"><span class="num">' + (i + 1) + "</span>" + avatar(p, i) + '<input value="' + esc(p) + '" data-pi="' + i + '" maxlength="16" aria-label="Player name" />' +
+      return '<div class="player" data-row="' + i + '"><span class="grip" data-grip="' + i + '" aria-label="Drag to reorder">' + icon("grip") + '</span><span class="num">' + (i + 1) + "</span>" + avatar(p, i) + '<input value="' + esc(p) + '" data-pi="' + i + '" maxlength="16" aria-label="Player name" />' +
         '<button class="ib" data-act="delp" data-i="' + i + '" aria-label="Remove">' + icon("trash") + "</button></div>";
     }).join("");
     return top("Players", backBtn("home"), '<span class="count">' + cleanPlayers().length + " / 20</span>") +
-      '<p class="muted">Add everyone in the order you’re sitting — the phone is passed around the circle.</p>' +
+      '<p class="muted">Add everyone in the order you’re sitting — the phone is passed around the circle. Drag the <b style="color:var(--text)">⋮⋮</b> handle to change the order.</p>' +
       '<div class="players">' + rows + "</div>" +
       '<div class="addrow"><input id="newp" placeholder="Add a player" maxlength="16" enterkeyhint="done" autocomplete="off" />' +
       '<button class="btn" data-act="addp" aria-label="Add player">' + icon("plus") + "</button></div>" +
@@ -467,7 +520,7 @@
         '<div class="footer"><button class="btn" data-act="iam">I’m ' + esc(name) + "</button></div>";
     }
     var last = i + 1 >= R.players.length;
-    return head + '<div class="stage">' + cardHtml(i) + '<p class="dim">Press and hold the card. Release to hide it.</p></div>' +
+    return head + '<div class="stage">' + cardHtml(i) + '<p class="dim" id="cardtip">Press and hold to see your card. You only get one look — memorise it!</p></div>' +
       '<div class="footer"><button class="btn" id="nextcard" data-act="hide"' + (R.seen ? "" : " disabled") + ">" +
       (last ? icon("check") + "Everyone’s ready" : "Next: " + esc(R.players[i + 1]) + icon("chev")) + "</button></div>";
   };
@@ -494,13 +547,24 @@
     return '<div class="card" id="card"><div class="face cover"><span class="hold">' + icon("eye") + "</span><b>Hold to reveal</b><span>" + esc(R.players[i]) + "’s secret card</span></div>" + secret + "</div>";
   }
 
+  /* Each player gets exactly one look: once the card is released it locks for good. */
+  function lockCard(card) {
+    card.classList.add("locked");
+    card.querySelector(".cover").innerHTML = '<span class="hold">' + icon("lock") + "</span><b>Card seen</b><span>You only get one look. Pass the phone on.</span>";
+    var t = document.getElementById("cardtip"); if (t) t.textContent = "Card locked — no second looks!";
+  }
   function bindCard() {
     var card = document.getElementById("card");
     if (!card) return;
-    function show(e) { e.preventDefault(); if (card.classList.contains("show")) return; card.classList.add("show"); vibrate(20); tone([660], 0.07); R.seen = true; }
+    function show(e) {
+      e.preventDefault();
+      if (card.classList.contains("show") || card.classList.contains("locked")) return;
+      card.classList.add("show"); vibrate(20); tone([660], 0.07); R.seen = true;
+    }
     function hide() {
       if (!card.classList.contains("show")) return;
       card.classList.remove("show");
+      lockCard(card);
       var b = document.getElementById("nextcard"); if (b) b.disabled = false;
     }
     card.addEventListener("pointerdown", show);
