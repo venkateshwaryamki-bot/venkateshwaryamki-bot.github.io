@@ -109,6 +109,7 @@
       <li><i>🏁</i>Near-misses score bonus points</li>
     </ul>
     <p class="sub" style="margin-top:18px;font-size:13px">Best: <b id="bestMenu">0</b></p>
+    <p id="apkLink" hidden style="margin:0;font-size:13px"><a href="NitroLane.apk" download style="color:var(--nitro)">⬇ Get the Android app (APK)</a></p>
   </div>
 </div>
 
@@ -321,6 +322,13 @@
   $('pauseBtn').addEventListener('pointerdown', e => { e.stopPropagation(); togglePause(); });
   $('resumeBtn').onclick = togglePause;
   $('muteBtn').onclick = () => { muted = !muted; store.set('nl.muted', muted); updateMute(); };
+  // Hooks for the Android app wrapper (pause on background, hardware back button).
+  window.nitroPause = () => { if (state === 'play') togglePause(); };
+  window.nitroBack = () => {
+    if (state === 'play' || state === 'paused') { togglePause(); return true; }
+    if (state === 'over') { $('menuBtn').click(); return true; }
+    return false;
+  };
   document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') togglePause(); });
 
   // ---------- update ----------
@@ -570,6 +578,7 @@
   window.addEventListener('resize', () => { resize(); });
   resize(); reset(); initScenery(); buildSwatches(); updateMute();
   $('bestMenu').textContent = best;
+  if (location.protocol !== 'file:') show('apkLink', true);
   requestAnimationFrame(frame);
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
